@@ -10,9 +10,9 @@ import {
 } from 'lucide-react';
 import { MOCK_PROJETS, formatFCFA, calculateDaysBetween, CONFIG_FONCTIONS } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, StatutGlobal, Marche, Projet } from '../types';
-import { useMarkets } from '../contexts/MarketContext'; // <--- 1. IMPORT DU CONTEXTE
+import { useMarkets } from '../contexts/MarketContext'; 
 
-// --- 2. MODIFICATION : Composant Cellule Document Intelligent (Upload/Download) ---
+// --- COMPOSANT CELLULE DOCUMENT INTELLIGENT ---
 const DocCellInline = ({ 
   doc, 
   label, 
@@ -30,7 +30,6 @@ const DocCellInline = ({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // On autorise le clic seulement si on est admin (pas readOnly) et pas désactivé
     if (!readOnly && !disabled) {
       fileInputRef.current?.click();
     }
@@ -43,35 +42,44 @@ const DocCellInline = ({
     }
   };
 
-  // Cas désactivé (ex: ANO pour un marché EDC)
+  // 1. CAS DESACTIVE
   if (disabled) {
     return (
-      <div className="ml-auto flex items-center justify-center p-1 opacity-20 cursor-not-allowed">
-        <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+      <div className="flex items-center ml-auto flex-shrink-0 opacity-20 pointer-events-none" title="Non applicable">
+         <span className="w-4 h-4 flex items-center justify-center bg-slate-100 rounded text-[8px] text-slate-400">/</span>
       </div>
     );
   }
 
-  // Cas Utilisateur (Lecture seule) : TÉLÉCHARGEMENT
+  // 2. CAS UTILISATEUR (Lecture Seule) : TÉLÉCHARGEMENT
   if (readOnly) {
     if (doc) {
       return (
-        <a 
-          href={doc.url} 
-          target="_blank" 
-          rel="noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          title={`Télécharger ${label}`}
-          className="ml-auto flex items-center justify-center p-1 rounded border bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 transition-all shadow-sm"
-        >
-          <Download size={10} />
-        </a>
+        <div className="flex items-center ml-auto flex-shrink-0">
+          <a 
+            href={doc.url} 
+            target="_blank" 
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title={`Télécharger ${label}`}
+            className="p-1 rounded border bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 shadow-sm flex items-center justify-center transition-all"
+          >
+            <Download size={9} />
+          </a>
+        </div>
       );
     }
-    return <div className="ml-auto w-4" />;
+    // Affiche une icône grisée "Fantôme" pour montrer que le document est attendu
+    return (
+      <div className="flex items-center ml-auto flex-shrink-0 opacity-30" title="Aucun document disponible">
+         <div className="p-1 rounded border border-slate-300 flex items-center justify-center">
+            <Download size={9} />
+         </div>
+      </div>
+    );
   }
 
-  // Cas Admin : TÉLÉVERSEMENT
+  // 3. CAS ADMIN : TÉLÉVERSEMENT (Seulement si utilisé ailleurs, ici le registre est masqué pour l'admin)
   return (
     <div className="flex items-center ml-auto flex-shrink-0">
       <input 
@@ -87,7 +95,7 @@ const DocCellInline = ({
         title={doc ? `Remplacer ${label}` : `Téléverser ${label}`}
         className={`p-1 rounded border transition-all flex items-center justify-center group/btn ${
           doc 
-            ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100' 
+            ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 shadow-sm' 
             : 'bg-slate-50 text-slate-400 border-dashed border-slate-300 hover:text-primary hover:border-primary hover:bg-blue-50'
         }`}
       >
@@ -97,15 +105,14 @@ const DocCellInline = ({
   );
 };
 
+// --- AUTRES COMPOSANTS ---
 const InlineField = ({ label, number, children, disabled }: any) => (
   <div className={`flex flex-col space-y-0 p-1 rounded-md border transition-all min-w-0 ${disabled ? 'bg-slate-50 border-slate-100 opacity-40 grayscale' : 'bg-white border-slate-100 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:bg-slate-50/80'}`}>
     <div className="flex items-center gap-1 mb-0.5">
       <span className="text-[7px] font-black text-slate-300 flex-shrink-0">{number}.</span>
       <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter truncate" title={label}>{label}</span>
     </div>
-    <div className="min-h-[12px] flex items-center gap-1 overflow-hidden">
-      {disabled ? <span className="text-[7px] font-black text-slate-300 italic">N/A (EDC)</span> : children}
-    </div>
+    <div className="min-h-[12px] flex items-center gap-1 overflow-hidden">{disabled ? <span className="text-[7px] font-black text-slate-300 italic">N/A (EDC)</span> : children}</div>
   </div>
 );
 
@@ -115,40 +122,22 @@ const ReadOnlyValue = ({ value, isDate = false, isAmount = false }: { value?: an
   </span>
 );
 
-// --- Composant de Menu Déroulant Personnalisé ---
 const CustomBulleSelect = ({ value, onChange, options, placeholder, disabled }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const selected = options.find((o: any) => o.value === value);
 
   return (
     <div className={`relative w-full ${disabled ? 'pointer-events-none' : ''}`} ref={containerRef}>
       <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-transparent border-none outline-none flex items-center justify-between cursor-pointer">
-        <span className={`truncate text-[11px] font-black ${!selected ? 'text-slate-300' : 'text-slate-700'}`}>
-          {selected ? selected.label : placeholder}
-        </span>
+        <span className={`truncate text-[11px] font-black ${!selected ? 'text-slate-300' : 'text-slate-700'}`}>{selected ? selected.label : placeholder}</span>
         <ChevronDown size={14} className={`text-slate-400 transition-transform flex-shrink-0 ml-1 ${isOpen ? 'rotate-180' : ''}`} />
       </div>
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] z-[999] p-2 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] z-[999] p-2">
           <div className="max-h-52 overflow-y-auto custom-scrollbar px-1">
             {options.map((opt: any) => (
-              <div
-                key={opt.value}
-                onClick={() => { onChange({ target: { value: opt.value } }); setIsOpen(false); }}
-                className={`group flex items-center justify-between px-4 py-3 my-0.5 text-[10px] font-black rounded-xl cursor-pointer transition-all ${value === opt.value ? 'bg-primary text-white shadow-md' : 'text-slate-600 hover:bg-slate-50 hover:text-primary'}`}
-              >
+              <div key={opt.value} onClick={() => { onChange({ target: { value: opt.value } }); setIsOpen(false); }} className={`group flex items-center justify-between px-4 py-3 my-0.5 text-[10px] font-black rounded-xl cursor-pointer transition-all ${value === opt.value ? 'bg-primary text-white shadow-md' : 'text-slate-600 hover:bg-slate-50 hover:text-primary'}`}>
                 <span className="truncate pr-2 uppercase">{opt.label}</span>
                 {value === opt.value && <Check size={12} className="flex-shrink-0" />}
               </div>
@@ -167,31 +156,25 @@ const BulleInput = ({ label, type = "text", value, onChange, placeholder, option
         <span className="text-[9px] font-black text-slate-400 px-2.5 uppercase tracking-tighter truncate w-24 flex-shrink-0" title={label}>{label}</span>
         <div className="flex-1 min-w-0 bg-white text-xs font-black text-slate-700 rounded-[2rem] shadow-sm py-2 px-4 flex items-center min-h-[46px] group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all">
           {Icon && <Icon size={14} className="mr-2 text-slate-300 flex-shrink-0" />}
-          {options ? (
-            <CustomBulleSelect value={value} onChange={onChange} options={options} placeholder="Choisir..." disabled={disabled} />
-          ) : textarea ? (
+          {options ? (<CustomBulleSelect value={value} onChange={onChange} options={options} placeholder="Choisir..." disabled={disabled} />) : textarea ? (
             <textarea value={value} onChange={onChange} required={required} placeholder={placeholder} rows={1} className="w-full bg-transparent border-none outline-none resize-none py-1 scrollbar-hide font-black placeholder:text-slate-300 text-[11px] leading-tight" />
-          ) : (
-            <input type={type} value={value} onChange={onChange} required={required} placeholder={placeholder} className="w-full bg-transparent border-none outline-none font-black placeholder:text-slate-300 text-[11px] min-w-0" />
-          )}
+          ) : (<input type={type} value={value} onChange={onChange} required={required} placeholder={placeholder} className="w-full bg-transparent border-none outline-none font-black placeholder:text-slate-300 text-[11px] min-w-0" />)}
         </div>
       </div>
     </div>
   );
 };
 
+// --- PAGE PRINCIPALE ---
 interface MarketListProps {
   mode: 'PPM' | 'ALL';
   readOnly?: boolean;
 }
 
 const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
-  // --- 3. MODIFICATION : Utilisation du contexte pour marches ---
   const { marches, updateMarche, addMarche } = useMarkets();
   
   const [projets, setProjets] = useState<Projet[]>(MOCK_PROJETS);
-  // Note: 'marches' vient maintenant du contexte, on supprime le state local
-  
   const [selectedYear, setSelectedYear] = useState(2024);
   const [selectedProjetId, setSelectedProjetId] = useState<string | null>(null);
   const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
@@ -212,16 +195,15 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     dates_prevues: {} as any, statut_global: StatutGlobal.PLANIFIE, hors_ppm: false, exercice: 2024
   });
 
-  // --- 4. MODIFICATION : Upload Global via Context ---
+  // Cette fonction n'est utilisée que par l'Utilisateur en consultation (si on voulait uploader) 
+  // ou si on réactivait le mode admin plus tard. Le mode admin actuel N'AFFICHE PAS le registre.
   const handleDocUpload = (marketId: string, docKey: string, isSpecialDoc?: boolean) => {
-    // On trouve le marché dans la liste globale
     const targetMarket = marches.find(m => m.id === marketId);
     if (!targetMarket) return;
 
-    // Simulation de l'upload
     const mockPiece = { 
-        nom: 'Document_Televerse_Admin.pdf', 
-        url: '#', // Lien de téléchargement
+        nom: 'Document_Telecharge.pdf', 
+        url: '#', 
         date_upload: new Date().toISOString().split('T')[0] 
     };
 
@@ -231,25 +213,8 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     } else {
       updatedMarket = { ...updatedMarket, docs: { ...updatedMarket.docs, [docKey]: mockPiece } };
     }
-    
-    // Mise à jour globale
     updateMarche(updatedMarket);
   };
-
-  const jalonCols: { key: JalonPassationKey; label: string }[] = [
-    { key: 'saisine_cipm', label: 'Saisine CIPM' }, { key: 'examen_dao_cipm', label: 'Examen DAO' },
-    { key: 'ano_bailleur_dao', label: 'ANO Bailleur (DAO)' }, { key: 'lancement_ao', label: 'Lancement AO' },
-    { key: 'depouillement', label: 'Dépouillement' }, { key: 'prop_attrib_cipm', label: 'Prop. Attribution' },
-    { key: 'avis_conforme_ca', label: 'Avis CA' }, { key: 'ano_bailleur_attrib', label: 'ANO Bailleur (Attrib)' },
-    { key: 'publication', label: 'Publication' }, { key: 'souscription_projet', label: 'Souscription' },
-    { key: 'saisine_cipm_projet', label: 'Saisine Projet' }, { key: 'examen_projet_cipm', label: 'Examen Projet' },
-    { key: 'ano_bailleur_projet', label: 'ANO Bailleur (Projet)' }, { key: 'signature_marche', label: 'Signature' },
-    { key: 'notification', label: 'Notification' },
-  ];
-
-  const projetsDeAnnee = projets.filter(p => p.exercice === selectedYear);
-  const currentProjet = projets.find(p => p.id === selectedProjetId);
-  const marketsOfProjet = marches.filter(m => m.projet_id === selectedProjetId);
 
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,7 +230,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     setIsProjectModalOpen(false);
   };
 
-  // --- 5. MODIFICATION : Ajout Marché via Context ---
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProjetId) return;
@@ -277,8 +241,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
       hors_ppm: false, docs: {}, is_infructueux: false, is_annule: false, recours: 'Néant',
       etat_avancement: 'Inscrit au PPM', dates_realisees: {} as any
     };
-    
-    // Utilisation de la fonction globale
     addMarche(newMarket);
     setIsModalOpen(false);
   };
@@ -298,14 +260,27 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
       setIsImporting(false);
       setIsExcelModalOpen(false);
       setExcelFile(null);
-      // Pour l'import Excel, il faudrait aussi parser le fichier et appeler addMarche() en boucle
-      // Je laisse la simulation pour l'instant
     }, 1500);
   };
 
+  const projetsDeAnnee = projets.filter(p => p.exercice === selectedYear);
+  const currentProjet = projets.find(p => p.id === selectedProjetId);
+  const marketsOfProjet = marches.filter(m => m.projet_id === selectedProjetId);
+
+  const jalonCols: { key: JalonPassationKey; label: string }[] = [
+    { key: 'saisine_cipm', label: 'Saisine CIPM' }, { key: 'examen_dao_cipm', label: 'Examen DAO' },
+    { key: 'ano_bailleur_dao', label: 'ANO Bailleur (DAO)' }, { key: 'lancement_ao', label: 'Lancement AO' },
+    { key: 'depouillement', label: 'Dépouillement' }, { key: 'prop_attrib_cipm', label: 'Prop. Attribution' },
+    { key: 'avis_conforme_ca', label: 'Avis CA' }, { key: 'ano_bailleur_attrib', label: 'ANO Bailleur (Attrib)' },
+    { key: 'publication', label: 'Publication' }, { key: 'souscription_projet', label: 'Souscription' },
+    { key: 'saisine_cipm_projet', label: 'Saisine Projet' }, { key: 'examen_projet_cipm', label: 'Examen Projet' },
+    { key: 'ano_bailleur_projet', label: 'ANO Bailleur (Projet)' }, { key: 'signature_marche', label: 'Signature' },
+    { key: 'notification', label: 'Notification' },
+  ];
+
   return (
     <div className="space-y-8 pb-20">
-      {/* Header Contextuelle */}
+      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-slate-800 tracking-tight uppercase">
@@ -319,9 +294,11 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                  <option value={2025}>2025</option>
                </select>
              </div>
-             <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest italic flex items-center gap-2">
-               <Info size={14} className="text-primary" /> Double-cliquez sur une ligne pour ouvrir le registre de pilotage (Téléversement)
-             </p>
+             {readOnly && (
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest italic flex items-center gap-2 animate-pulse">
+                  <Info size={14} className="text-primary" /> Double-cliquez pour accéder au téléchargement
+                </p>
+             )}
           </div>
         </div>
         {!readOnly && (
@@ -331,14 +308,10 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
         )}
       </div>
 
-      {/* Liste des Projets Bulle */}
+      {/* Liste Projets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projetsDeAnnee.length > 0 ? projetsDeAnnee.map(p => (
-          <div 
-            key={p.id}
-            onClick={() => setSelectedProjetId(p.id)}
-            className={`cursor-pointer p-8 rounded-[3rem] border-2 transition-all flex flex-col justify-between h-48 shadow-sm hover:shadow-xl group ${selectedProjetId === p.id ? 'bg-primary border-primary text-white scale-105 shadow-primary/30' : 'bg-white border-slate-100 text-slate-700 hover:border-primary/20'}`}
-          >
+          <div key={p.id} onClick={() => setSelectedProjetId(p.id)} className={`cursor-pointer p-8 rounded-[3rem] border-2 transition-all flex flex-col justify-between h-48 shadow-sm hover:shadow-xl group ${selectedProjetId === p.id ? 'bg-primary border-primary text-white scale-105 shadow-primary/30' : 'bg-white border-slate-100 text-slate-700 hover:border-primary/20'}`}>
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${selectedProjetId === p.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
@@ -363,7 +336,7 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
         )}
       </div>
 
-      {/* Détails du PPM pour le projet sélectionné */}
+      {/* Détails du Projet */}
       {selectedProjetId && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between border-t-2 border-slate-100 pt-8 gap-4">
@@ -423,8 +396,10 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                      return (
                        <React.Fragment key={m.id}>
                          <tr 
-                            onDoubleClick={() => setExpandedMarketId(isExpanded ? null : m.id)}
-                            className={`hover:bg-blue-50/30 group transition-colors cursor-pointer select-none ${isExpanded ? 'bg-primary/5' : ''}`}
+                            // ON N'OUVRE LE REGISTRE QU'EN MODE LECTURE SEULE (UTILISATEUR)
+                            // Si readOnly est false (Admin), on ne fait rien (undefined), donc pas d'expansion possible.
+                            onDoubleClick={readOnly ? () => setExpandedMarketId(isExpanded ? null : m.id) : undefined}
+                            className={`hover:bg-blue-50/30 group transition-colors select-none ${isExpanded ? 'bg-primary/5' : ''} ${readOnly ? 'cursor-pointer' : ''}`}
                          >
                             <td className={`px-6 py-4 font-black text-slate-900 underline underline-offset-4 decoration-slate-200 sticky left-0 z-10 shadow-sm ${isExpanded ? 'bg-slate-50' : 'bg-white group-hover:bg-slate-50'}`}>
                               <Link to={`/markets/${m.id}`}>{m.id}</Link>
@@ -450,25 +425,32 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                             <td className="px-4 py-4 text-center font-black text-emerald-700 bg-emerald-50/10 border-l border-slate-50">{delaiReel !== null ? delaiReel : '—'}</td>
                          </tr>
                          
-                         {/* SECTION REGISTRE DE PILOTAGE (TÉLÉVERSEMENT) */}
-                         {isExpanded && (
+                         {/* SECTION REGISTRE DE PILOTAGE - VISIBLE SEULEMENT SI EXPANDED (DONC SEULEMENT POUR UTILISATEUR) */}
+                         {isExpanded && readOnly && (
                            <tr className="bg-slate-50/60">
                              <td colSpan={6 + (jalonCols.length * 2) + 2} className="px-2 py-1.5">
                                <div className="bg-white rounded-lg border border-primary/10 shadow-lg overflow-hidden animate-in slide-in-from-top-1 duration-200">
                                  <div className="bg-primary/5 px-4 py-1 border-b border-primary/10 flex items-center justify-between">
                                    <div className="flex items-center gap-2 text-primary font-black uppercase text-[8px] tracking-widest">
                                      <Activity size={10} />
-                                     Registre de Pilotage (Téléversement) : {m.id}
+                                     Registre de Pilotage (Téléchargement) : {m.id}
                                    </div>
                                    <button onClick={() => setExpandedMarketId(null)} className="p-0.5 hover:bg-primary/10 rounded text-primary"><X size={10} /></button>
                                  </div>
                                  
                                  <div className="p-1.5 grid grid-cols-4 md:grid-cols-6 lg:grid-cols-10 gap-1.5">
+                                   {/* CHAMPS SANS BOUTONS */}
                                    <InlineField number="1" label="N°"><ReadOnlyValue value={m.id} /></InlineField>
-                                   {/* --- 6. MODIFICATION : Passage du readOnly et disabled aux DocCellInline --- */}
-                                   <InlineField number="2" label="Intitulé projet (DAO)"><ReadOnlyValue value={m.objet} /><DocCellInline doc={m.docs?.dao} label="DAO" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'dao')} /></InlineField>
+                                   <InlineField number="2" label="Intitulé projet (DAO)"><ReadOnlyValue value={m.objet} /></InlineField>
                                    <InlineField number="3" label="Source de financement"><ReadOnlyValue value={m.source_financement} /></InlineField>
-                                   <InlineField number="4" label="Imputation (Attest. DF)"><ReadOnlyValue value={m.imputation_budgetaire} /></InlineField>
+                                   
+                                   {/* IMPUTATION AVEC BOUTON DE TÉLÉCHARGEMENT */}
+                                   <InlineField number="4" label="Imputation (Attest. DF)">
+                                      <ReadOnlyValue value={m.imputation_budgetaire} />
+                                      <DocCellInline doc={m.docs?.imputation} label="Attest. DF" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'imputation')} />
+                                   </InlineField>
+                                   
+                                   {/* AUTRES CHAMPS AVEC BOUTONS */}
                                    <InlineField number="5" label="Saisine prévisionnelle CIPM"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_prev} isDate /><DocCellInline doc={m.docs?.saisine_prev} label="Saisine Prév" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine_prev')} /></InlineField>
                                    <InlineField number="6" label="Saisine CIPM* (Transmis.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm} isDate /><DocCellInline doc={m.docs?.saisine} label="Docs" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine')} /></InlineField>
                                    <InlineField number="7" label="Examen DAO CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_dao_cipm} isDate /><DocCellInline doc={m.docs?.examen_dao} label="Examen DAO" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'examen_dao')} /></InlineField>
@@ -480,27 +462,34 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                    <InlineField number="13" label="Valid. Évaluation (PV)"><ReadOnlyValue value={m.dates_realisees.validation_eval_offres} isDate /><DocCellInline doc={m.docs?.validation_eval_offres} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_eval_offres')} /></InlineField>
                                    <InlineField number="14" label="ANO bailleurs (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_eval} isDate /><DocCellInline doc={m.docs?.ano_bailleur_eval} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_eval')} /></InlineField>
                                    <InlineField number="15" label="Ouvertures Fin. (PV)"><ReadOnlyValue value={m.dates_realisees.ouverture_financiere} isDate /><DocCellInline doc={m.docs?.ouverture_financiere} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ouverture_financiere')} /></InlineField>
+                                   
                                    <InlineField number="16" label="Infructueux (Décision)">
                                       <span className={`text-[7px] font-black px-1 rounded ${m.is_infructueux ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-400'}`}>{m.is_infructueux ? 'OUI' : 'NON'}</span>
                                       <DocCellInline doc={m.doc_infructueux} label="Décision" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'doc_infructueux', true)} />
                                    </InlineField>
+                                   
                                    <InlineField number="17" label="Prop. Attribution* (PV)"><ReadOnlyValue value={m.dates_realisees.prop_attrib_cipm} isDate /><DocCellInline doc={m.docs?.prop_attrib_cipm} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'prop_attrib_cipm')} /></InlineField>
                                    <InlineField number="18" label="Avis conforme CA* (Avis)"><ReadOnlyValue value={m.dates_realisees.avis_conforme_ca} isDate /><DocCellInline doc={m.docs?.avis_conforme_ca} label="Avis" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'avis_conforme_ca')} /></InlineField>
                                    <InlineField number="19" label="ANO Bailleurs* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_attrib} isDate /><DocCellInline doc={m.docs?.ano_bailleur_attrib} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_attrib')} /></InlineField>
                                    <InlineField number="20" label="Publication* (Décis.)"><ReadOnlyValue value={m.dates_realisees.publication} isDate /><DocCellInline doc={m.docs?.publication} label="Décision" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'publication')} /></InlineField>
                                    <InlineField number="21" label="Notification Attrib. (Notif.)"><ReadOnlyValue value={m.dates_realisees.notification_attrib} isDate /><DocCellInline doc={m.docs?.notification_attrib} label="Notif." readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'notification_attrib')} /></InlineField>
+                                   
+                                   {/* CHAMPS SANS BOUTONS */}
                                    <InlineField number="22" label="Titulaire"><ReadOnlyValue value={m.titulaire} /></InlineField>
                                    <InlineField number="23" label="Montant TTC (FCFA)"><ReadOnlyValue value={m.montant_ttc_reel} isAmount /></InlineField>
+                                   
                                    <InlineField number="24" label="Souscription Marché*"><ReadOnlyValue value={m.dates_realisees.souscription_projet} isDate /><DocCellInline doc={m.docs?.souscription} label="Souscription" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'souscription')} /></InlineField>
                                    <InlineField number="25" label="Saisine Projet* (Trans.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_projet} isDate /><DocCellInline doc={m.docs?.saisine_projet} label="Docs" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine_projet')} /></InlineField>
                                    <InlineField number="26" label="Examen Projet CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_projet_cipm} isDate /><DocCellInline doc={m.docs?.examen_projet} label="Examen Projet" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'examen_projet')} /></InlineField>
                                    <InlineField number="27" label="Validation (PV)"><ReadOnlyValue value={m.dates_realisees.validation_projet} isDate /><DocCellInline doc={m.docs?.validation_projet} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_projet')} /></InlineField>
                                    <InlineField number="28" label="ANO bailleurs* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_projet} isDate /><DocCellInline doc={m.docs?.ano_bailleur_projet} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_projet')} /></InlineField>
                                    <InlineField number="29" label="Signature Marché (Doc)"><ReadOnlyValue value={m.dates_realisees.signature_marche} isDate /><DocCellInline doc={m.docs?.signature_marche} label="Marché" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'signature_marche')} /></InlineField>
+                                   
                                    <InlineField number="30" label="Annulé (Accord CA)">
                                       <span className={`text-[7px] font-black px-1 rounded ${m.is_annule ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>{m.is_annule ? 'OUI' : 'NON'}</span>
                                       <DocCellInline doc={m.doc_annulation_ca} label="Accord CA" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'doc_annulation_ca', true)} />
                                    </InlineField>
+                                   
                                    <InlineField number="31" label="Notification*"><ReadOnlyValue value={m.dates_realisees.notification} isDate /><DocCellInline doc={m.docs?.notification_cloture} label="Notif" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'notification_cloture')} /></InlineField>
                                    <InlineField number="32" label="Recours"><ReadOnlyValue value={m.recours} /><DocCellInline doc={m.docs?.recours} label="Recours" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'recours')} /></InlineField>
                                    <InlineField number="33" label="Etat d'avancement"><span className="text-[7px] font-black text-primary bg-primary/5 px-1 py-0.5 rounded uppercase">{m.etat_avancement}</span><DocCellInline doc={m.docs?.etat_avancement_doc} label="Etat" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'etat_avancement_doc')} /></InlineField>
@@ -521,7 +510,7 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
         </div>
       )}
 
-      {/* MODAL IMPORT EXCEL */}
+      {/* MODAL IMPORT EXCEL (Visible en Admin uniquement) */}
       {isExcelModalOpen && !readOnly && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 overflow-visible">
           <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl overflow-visible animate-in fade-in zoom-in duration-300">
@@ -564,7 +553,7 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
         </div>
       )}
 
-      {/* MODAL CREATION PROJET */}
+      {/* MODAL CREATION PROJET (Admin uniquement) */}
       {isProjectModalOpen && !readOnly && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 overflow-visible">
           <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl overflow-visible animate-in fade-in zoom-in duration-300">
@@ -589,7 +578,7 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
         </div>
       )}
 
-      {/* MODAL ALIMENTER PPM (MARCHÉ) */}
+      {/* MODAL ALIMENTER PPM (Admin uniquement) */}
       {isModalOpen && !readOnly && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 overflow-visible">
           <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-6xl max-h-[94vh] flex flex-col overflow-visible animate-in fade-in zoom-in duration-300">
