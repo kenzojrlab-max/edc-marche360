@@ -55,7 +55,7 @@ const DocCellInline = ({
   if (readOnly) {
     if (doc) {
       return (
-        <div className="flex items-center ml-auto flex-shrink-0">
+        <div className="flex items-center ml-auto flex-shrink-0 pl-1">
           <a 
             href={doc.url} 
             target="_blank" 
@@ -64,24 +64,24 @@ const DocCellInline = ({
             title={`Télécharger ${label}`}
             className="p-1 rounded border bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 shadow-sm flex items-center justify-center transition-all"
           >
-            <Download size={9} />
+            <Download size={10} />
           </a>
         </div>
       );
     }
-    // Affiche une icône grisée "Fantôme" pour montrer que le document est attendu
+    // Affiche une icône grisée "Fantôme" si pas de doc
     return (
-      <div className="flex items-center ml-auto flex-shrink-0 opacity-30" title="Aucun document disponible">
+      <div className="flex items-center ml-auto flex-shrink-0 pl-1 opacity-30" title="Aucun document disponible">
          <div className="p-1 rounded border border-slate-300 flex items-center justify-center">
-            <Download size={9} />
+            <Download size={10} />
          </div>
       </div>
     );
   }
 
-  // 3. CAS ADMIN : TÉLÉVERSEMENT (Seulement si utilisé ailleurs, ici le registre est masqué pour l'admin)
+  // 3. CAS ADMIN : TÉLÉVERSEMENT
   return (
-    <div className="flex items-center ml-auto flex-shrink-0">
+    <div className="flex items-center ml-auto flex-shrink-0 pl-1">
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -99,7 +99,7 @@ const DocCellInline = ({
             : 'bg-slate-50 text-slate-400 border-dashed border-slate-300 hover:text-primary hover:border-primary hover:bg-blue-50'
         }`}
       >
-        <Upload size={9} className="group-hover/btn:scale-110 transition-transform" />
+        <Upload size={10} className="group-hover/btn:scale-110 transition-transform" />
       </button>
     </div>
   );
@@ -107,12 +107,14 @@ const DocCellInline = ({
 
 // --- AUTRES COMPOSANTS ---
 const InlineField = ({ label, number, children, disabled }: any) => (
-  <div className={`flex flex-col space-y-0 p-1 rounded-md border transition-all min-w-0 ${disabled ? 'bg-slate-50 border-slate-100 opacity-40 grayscale' : 'bg-white border-slate-100 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:bg-slate-50/80'}`}>
+  <div className={`flex flex-col space-y-0 p-1.5 rounded-md border transition-all min-w-0 ${disabled ? 'bg-slate-50 border-slate-100 opacity-40 grayscale' : 'bg-white border-slate-100 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:bg-slate-50/80'}`}>
     <div className="flex items-center gap-1 mb-0.5">
       <span className="text-[7px] font-black text-slate-300 flex-shrink-0">{number}.</span>
       <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter truncate" title={label}>{label}</span>
     </div>
-    <div className="min-h-[12px] flex items-center gap-1 overflow-hidden">{disabled ? <span className="text-[7px] font-black text-slate-300 italic">N/A (EDC)</span> : children}</div>
+    <div className="min-h-[14px] flex items-center gap-1 overflow-hidden relative">
+      {disabled ? <span className="text-[7px] font-black text-slate-300 italic">N/A (EDC)</span> : children}
+    </div>
   </div>
 );
 
@@ -122,6 +124,7 @@ const ReadOnlyValue = ({ value, isDate = false, isAmount = false }: { value?: an
   </span>
 );
 
+// ... (Select et Input restent inchangés mais inclus pour compilation) ...
 const CustomBulleSelect = ({ value, onChange, options, placeholder, disabled }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -195,8 +198,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     dates_prevues: {} as any, statut_global: StatutGlobal.PLANIFIE, hors_ppm: false, exercice: 2024
   });
 
-  // Cette fonction n'est utilisée que par l'Utilisateur en consultation (si on voulait uploader) 
-  // ou si on réactivait le mode admin plus tard. Le mode admin actuel N'AFFICHE PAS le registre.
   const handleDocUpload = (marketId: string, docKey: string, isSpecialDoc?: boolean) => {
     const targetMarket = marches.find(m => m.id === marketId);
     if (!targetMarket) return;
@@ -396,8 +397,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                      return (
                        <React.Fragment key={m.id}>
                          <tr 
-                            // ON N'OUVRE LE REGISTRE QU'EN MODE LECTURE SEULE (UTILISATEUR)
-                            // Si readOnly est false (Admin), on ne fait rien (undefined), donc pas d'expansion possible.
                             onDoubleClick={readOnly ? () => setExpandedMarketId(isExpanded ? null : m.id) : undefined}
                             className={`hover:bg-blue-50/30 group transition-colors select-none ${isExpanded ? 'bg-primary/5' : ''} ${readOnly ? 'cursor-pointer' : ''}`}
                          >
@@ -425,7 +424,7 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                             <td className="px-4 py-4 text-center font-black text-emerald-700 bg-emerald-50/10 border-l border-slate-50">{delaiReel !== null ? delaiReel : '—'}</td>
                          </tr>
                          
-                         {/* SECTION REGISTRE DE PILOTAGE - VISIBLE SEULEMENT SI EXPANDED (DONC SEULEMENT POUR UTILISATEUR) */}
+                         {/* SECTION REGISTRE DE PILOTAGE - VISIBLE SEULEMENT SI EXPANDED ET READONLY */}
                          {isExpanded && readOnly && (
                            <tr className="bg-slate-50/60">
                              <td colSpan={6 + (jalonCols.length * 2) + 2} className="px-2 py-1.5">
@@ -439,18 +438,21 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                  </div>
                                  
                                  <div className="p-1.5 grid grid-cols-4 md:grid-cols-6 lg:grid-cols-10 gap-1.5">
-                                   {/* CHAMPS SANS BOUTONS */}
                                    <InlineField number="1" label="N°"><ReadOnlyValue value={m.id} /></InlineField>
-                                   <InlineField number="2" label="Intitulé projet (DAO)"><ReadOnlyValue value={m.objet} /></InlineField>
+                                   
+                                   {/* ICI: INTITULE AVEC BOUTON DE TELECHARGEMENT */}
+                                   <InlineField number="2" label="Intitulé projet (DAO)">
+                                     <ReadOnlyValue value={m.objet} />
+                                     <DocCellInline doc={m.docs?.dao} label="DAO" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'dao')} />
+                                   </InlineField>
+                                   
                                    <InlineField number="3" label="Source de financement"><ReadOnlyValue value={m.source_financement} /></InlineField>
                                    
-                                   {/* IMPUTATION AVEC BOUTON DE TÉLÉCHARGEMENT */}
                                    <InlineField number="4" label="Imputation (Attest. DF)">
                                       <ReadOnlyValue value={m.imputation_budgetaire} />
                                       <DocCellInline doc={m.docs?.imputation} label="Attest. DF" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'imputation')} />
                                    </InlineField>
                                    
-                                   {/* AUTRES CHAMPS AVEC BOUTONS */}
                                    <InlineField number="5" label="Saisine prévisionnelle CIPM"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_prev} isDate /><DocCellInline doc={m.docs?.saisine_prev} label="Saisine Prév" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine_prev')} /></InlineField>
                                    <InlineField number="6" label="Saisine CIPM* (Transmis.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm} isDate /><DocCellInline doc={m.docs?.saisine} label="Docs" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine')} /></InlineField>
                                    <InlineField number="7" label="Examen DAO CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_dao_cipm} isDate /><DocCellInline doc={m.docs?.examen_dao} label="Examen DAO" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'examen_dao')} /></InlineField>
@@ -474,7 +476,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                    <InlineField number="20" label="Publication* (Décis.)"><ReadOnlyValue value={m.dates_realisees.publication} isDate /><DocCellInline doc={m.docs?.publication} label="Décision" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'publication')} /></InlineField>
                                    <InlineField number="21" label="Notification Attrib. (Notif.)"><ReadOnlyValue value={m.dates_realisees.notification_attrib} isDate /><DocCellInline doc={m.docs?.notification_attrib} label="Notif." readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'notification_attrib')} /></InlineField>
                                    
-                                   {/* CHAMPS SANS BOUTONS */}
                                    <InlineField number="22" label="Titulaire"><ReadOnlyValue value={m.titulaire} /></InlineField>
                                    <InlineField number="23" label="Montant TTC (FCFA)"><ReadOnlyValue value={m.montant_ttc_reel} isAmount /></InlineField>
                                    
