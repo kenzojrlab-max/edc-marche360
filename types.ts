@@ -35,29 +35,64 @@ export interface PieceJointe {
 }
 
 export type JalonPassationKey = 
-  | 'saisine_cipm_prev'
-  | 'saisine_cipm' 
-  | 'examen_dao_cipm' 
-  | 'validation_dao'
-  | 'ano_bailleur_dao' 
-  | 'lancement_ao'
-  | 'additif'
-  | 'depouillement' 
-  | 'validation_eval_offres'
-  | 'ano_bailleur_eval'
-  | 'ouverture_financiere'
-  | 'prop_attrib_cipm'
-  | 'avis_conforme_ca' 
-  | 'ano_bailleur_attrib' 
-  | 'publication' 
-  | 'notification_attrib'
-  | 'souscription_projet' 
-  | 'saisine_cipm_projet' 
-  | 'examen_projet_cipm' 
-  | 'validation_projet'
-  | 'ano_bailleur_projet' 
-  | 'signature_marche'
-  | 'notification';
+  | 'saisine_cipm_prev' | 'saisine_cipm' | 'examen_dao_cipm' | 'validation_dao'
+  | 'ano_bailleur_dao' | 'lancement_ao' | 'additif' | 'depouillement' 
+  | 'validation_eval_offres' | 'ano_bailleur_eval' | 'ouverture_financiere'
+  | 'prop_attrib_cipm' | 'avis_conforme_ca' | 'ano_bailleur_attrib' | 'publication' 
+  | 'notification_attrib' | 'souscription_projet' | 'saisine_cipm_projet' 
+  | 'examen_projet_cipm' | 'validation_projet' | 'ano_bailleur_projet' 
+  | 'signature_marche' | 'notification';
+
+// --- NOUVEAUX TYPES POUR L'EXECUTION (AJOUTÉS) ---
+
+export interface Decompte {
+  id: string;
+  numero: string;
+  objet: string;
+  montant: number;
+  date_validation: string;
+  doc?: PieceJointe;
+}
+
+export interface Avenant {
+  id: string;
+  ref: string;
+  objet: string;
+  montant_inc_dec: number;
+  date_signature: string;
+  doc_notification?: PieceJointe;
+  doc_os?: PieceJointe;
+  doc_enregistrement?: PieceJointe;
+}
+
+export interface ExecutionData {
+  // 6.1 Données Contractuelles & Démarrage
+  ref_contrat?: string;
+  delai_execution?: number;
+  date_notification_os?: string;
+  
+  doc_notification?: PieceJointe;
+  doc_os_demarrage?: PieceJointe;
+  doc_caution_def?: PieceJointe;
+  doc_assurance?: PieceJointe;
+  doc_enregistrement?: PieceJointe;
+
+  // 6.2 Gestion Financière
+  decomptes: Decompte[];
+  
+  type_retenue_garantie: 'OPTION_A' | 'OPTION_B';
+  doc_caution_bancaire?: PieceJointe;
+
+  // Avenants
+  has_avenant: boolean;
+  avenants: Avenant[];
+
+  // Résiliation
+  is_resilie: boolean;
+  doc_mise_en_demeure?: PieceJointe;
+  doc_constat_carence?: PieceJointe;
+  doc_decision_resiliation?: PieceJointe;
+}
 
 export interface Projet {
   id: string;
@@ -91,26 +126,23 @@ export interface Marche {
 
   docs: Partial<Record<string, PieceJointe>>;
   
-  // Gestion Infructueux
   is_infructueux: boolean;
   doc_infructueux?: PieceJointe;
-
-  // Gestion Annulation
   is_annule: boolean;
   motif_annulation?: string;
   doc_annulation_ca?: PieceJointe;
   
-  // Gestion Recours (NOUVEAU)
   has_recours: boolean;
   recours_issue?: string;
   doc_recours?: PieceJointe;
-  
-  // champ obsolète mais gardé pour compatibilité temporaire si besoin
   recours?: string; 
 
   etat_avancement: string;
   titulaire?: string;
   montant_ttc_reel?: number;
+
+  // NOUVEAU CHAMP EXECUTION (AJOUTÉ)
+  execution: ExecutionData;
 }
 
 export interface ConfigFonction {

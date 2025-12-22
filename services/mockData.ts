@@ -135,9 +135,18 @@ export const MOCK_MARCHES: Marche[] = [
     // Champs Recours
     has_recours: false,
     recours_issue: '',
-    recours: 'Néant', // Legacy
+    recours: 'Néant', 
     
-    etat_avancement: 'Examen DAO'
+    etat_avancement: 'Examen DAO',
+
+    // --- NOUVEAU : Initialisation de l'objet Execution ---
+    execution: {
+      decomptes: [],
+      type_retenue_garantie: 'OPTION_A',
+      has_avenant: false,
+      avenants: [],
+      is_resilie: false
+    }
   }
 ];
 

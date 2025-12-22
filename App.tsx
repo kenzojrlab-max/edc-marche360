@@ -19,6 +19,7 @@ import Dashboard from './pages/Dashboard';
 import MarketList from './pages/MarketList';
 import MarketDetail from './pages/MarketDetail';
 import TrackingPage from './pages/TrackingPage';
+import ExecutionPage from './pages/ExecutionPage.tsx'; // <--- Import de la nouvelle page
 import DocumentLibrary from './pages/DocumentLibrary';
 import SettingsPage from './pages/Settings';
 import { CURRENT_USER } from './services/mockData';
@@ -172,7 +173,7 @@ function App() {
         <Route path="/ppm-view" element={<MarketList mode="PPM" readOnly={true} />} />
         <Route path="/ppm-manage" element={<MarketList mode="PPM" readOnly={false} />} />
         <Route path="/tracking" element={<TrackingPage />} />
-        <Route path="/execution" element={<TrackingPage />} /> {/* Point d'entrée pour l'exécution */}
+        <Route path="/execution" element={<ExecutionPage />} /> {/* Route vers la nouvelle page */}
         <Route path="/markets/:id" element={<MarketDetail />} />
         <Route path="/documents" element={<DocumentLibrary />} />
         <Route path="/settings" element={<SettingsPage />} />
