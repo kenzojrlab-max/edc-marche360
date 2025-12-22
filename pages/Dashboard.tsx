@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend
@@ -42,6 +41,10 @@ const Dashboard: React.FC = () => {
   const tauxContractualisation = totalMarkets > 0 ? Math.round((strictlySigned / totalMarkets) * 100) : 0;
   
   const celerite = "92%"; // Mock value
+  
+  // --- NOUVEAU CALCUL CONTENTIEUX BASÉ SUR "has_recours" ---
+  const totalRecours = data.filter(m => m.has_recours).length;
+  const tauxContentieux = totalMarkets > 0 ? ((totalRecours / totalMarkets) * 100).toFixed(1) : "0";
 
   // Chart Data
   const statusData = [
@@ -114,10 +117,10 @@ const Dashboard: React.FC = () => {
         />
         <StatCard 
           title="Taux de Contentieux" 
-          value="0%" 
-          subtext="0 Recours enregistrés" 
+          value={`${tauxContentieux}%`} 
+          subtext={`${totalRecours} Recours enregistré(s)`} 
           icon={AlertCircle} 
-          colorClass="text-slate-600" 
+          colorClass={totalRecours > 0 ? "text-red-600" : "text-slate-600"} 
         />
       </div>
 

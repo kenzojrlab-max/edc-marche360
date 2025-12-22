@@ -1,4 +1,3 @@
-
 import { Marche, SourceFinancement, StatutGlobal, User, UserRole, ConfigFonction, Projet, LibraryDocument, DocumentCategory } from '../types';
 
 export const CURRENT_USER: User = {
@@ -128,8 +127,16 @@ export const MOCK_MARCHES: Marche[] = [
       depouillement: mockDoc
     }, 
     is_infructueux: false, 
-    is_annule: false, 
-    recours: 'Néant', 
+    
+    // Champs Annulation
+    is_annule: false,
+    motif_annulation: '',
+    
+    // Champs Recours
+    has_recours: false,
+    recours_issue: '',
+    recours: 'Néant', // Legacy
+    
     etat_avancement: 'Examen DAO'
   }
 ];

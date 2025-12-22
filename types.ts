@@ -1,4 +1,3 @@
-
 export enum UserRole {
   ADMIN = 'ADMIN',
   SUPER_ADMIN = 'SUPER_ADMIN',
@@ -91,13 +90,24 @@ export interface Marche {
   dates_realisees: Record<JalonPassationKey, string | undefined>;
 
   docs: Partial<Record<string, PieceJointe>>;
+  
+  // Gestion Infructueux
   is_infructueux: boolean;
   doc_infructueux?: PieceJointe;
+
+  // Gestion Annulation
   is_annule: boolean;
   motif_annulation?: string;
   doc_annulation_ca?: PieceJointe;
   
-  recours: string; 
+  // Gestion Recours (NOUVEAU)
+  has_recours: boolean;
+  recours_issue?: string;
+  doc_recours?: PieceJointe;
+  
+  // champ obsolète mais gardé pour compatibilité temporaire si besoin
+  recours?: string; 
+
   etat_avancement: string;
   titulaire?: string;
   montant_ttc_reel?: number;

@@ -7,13 +7,14 @@ import {
   Save, 
   Upload, 
   ShieldCheck,
-  Download
+  Download,
+  AlertTriangle 
 } from 'lucide-react';
 import { CURRENT_USER } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, UserRole } from '../types';
 import { useMarkets } from '../contexts/MarketContext';
 
-// --- 1. MODIFICATION : DocCell accepte maintenant un fichier en paramètre ---
+// --- 1. DocCell : Upload ou Download selon le rôle ---
 const DocCell = ({ 
   doc, 
   label, 
@@ -23,7 +24,7 @@ const DocCell = ({
   doc?: any, 
   label: string, 
   disabled?: boolean, 
-  onUpload?: (file: File) => void // <--- Changement de type ici
+  onUpload?: (file: File) => void 
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -38,11 +39,12 @@ const DocCell = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      if (onUpload) onUpload(e.target.files[0]); // <--- On passe le vrai fichier ici
+      if (onUpload) onUpload(e.target.files[0]);
       e.target.value = '';
     }
   };
 
+  // VUE UTILISATEUR : TÉLÉCHARGEMENT
   if (!isAdmin) {
     if (doc && !disabled) {
        return (
@@ -65,6 +67,7 @@ const DocCell = ({
     );
   }
 
+  // VUE ADMIN : UPLOAD
   return (
     <div className={`flex justify-center items-center gap-1 flex-shrink-0 ${disabled ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
       <input 
@@ -90,6 +93,7 @@ const DocCell = ({
   );
 };
 
+// --- Composant Input Date ---
 const AdminDateInput = ({ value, onChange, disabled }: { value?: string, onChange: (v: string) => void, disabled?: boolean }) => (
   <input 
     type="date" 
@@ -122,18 +126,17 @@ const TrackingPage: React.FC = () => {
     }
   };
 
-  // --- 2. MODIFICATION : Création d'un lien Blob URL réel ---
+  // Gestion Upload (URL locale pour démo)
   const handleDocUpload = (marketId: string, docKey: string, file: File, isSpecialDoc?: boolean) => {
     if (!isAdmin) return;
 
     const market = marches.find(m => m.id === marketId);
     if (market) {
-        // C'est ici que la magie opère : on crée un lien temporaire vers le fichier local
         const fakeUrl = URL.createObjectURL(file);
         
         const newDoc = { 
             nom: file.name, 
-            url: fakeUrl, // <--- Ce lien fonctionne maintenant !
+            url: fakeUrl, 
             date_upload: new Date().toISOString().split('T')[0] 
         };
         
@@ -203,38 +206,47 @@ const TrackingPage: React.FC = () => {
                 <th colSpan={3} className="px-4 py-2 text-center bg-slate-800">31-33. Clôture</th>
               </tr>
               <tr className="bg-slate-50 text-slate-400 border-b border-slate-200 uppercase text-[8px]">
+                {/* En-têtes colonnes */}
                 <th className="px-3 py-3 sticky left-0 bg-slate-50 z-20 border-r border-slate-200">1. N°</th>
                 <th className="px-3 py-3 min-w-[160px] border-r border-slate-200">2. Intitulé projet (DAO)</th>
                 <th className="px-3 py-3 border-r border-slate-200">3. Financement</th>
                 <th className="px-3 py-3 border-r border-slate-200">4. Imputation (Attest. DF)</th>
+                
                 <th className="px-3 py-3 border-r border-slate-200 text-center">5. Saisine prév. CIPM</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">6. Saisine CIPM*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">7. Examen DAO CIPM*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">8. Validation dossier (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">9. ANO Bailleur*</th>
+
                 <th className="px-3 py-3 border-r border-slate-200 text-center">10. Lancement AO*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">11. Additif (Doc)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">12. Dépouillement* (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">13. Valid. Éval. (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">14. ANO bailleurs</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">15. Ouvertures Fin. (PV)</th>
+
                 <th className="px-3 py-3 border-r border-slate-200 text-center">16. Infructueux</th>
+
                 <th className="px-3 py-3 border-r border-slate-200 text-center">17. Prop. Attrib.* (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">18. Avis conforme CA*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">19. ANO Bailleurs*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">20. Publication*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">21. Notification Attrib.</th>
+
                 <th className="px-3 py-3 border-r border-slate-200 min-w-[120px]">22. Titulaire</th>
                 <th className="px-3 py-3 border-r border-slate-200">23. Montant TTC</th>
+
                 <th className="px-3 py-3 border-r border-slate-200 text-center">24. Souscription*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">25. Saisine Projet*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">26. Examen Projet*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">27. Validation (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">28. ANO bailleurs*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">29. Signature Marché</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center">30. Annulé</th>
+
+                <th className="px-3 py-3 border-r border-slate-200 text-center min-w-[180px]">30. Annulé</th>
+
                 <th className="px-3 py-3 border-r border-slate-200 text-center">31. Notification*</th>
-                <th className="px-3 py-3 border-r border-slate-200">32. Recours</th>
+                <th className="px-3 py-3 border-r border-slate-200 min-w-[180px]">32. Recours (Contentieux)</th>
                 <th className="px-3 py-3">33. Etat d'avancement</th>
               </tr>
             </thead>
@@ -249,7 +261,6 @@ const TrackingPage: React.FC = () => {
                     <td className="px-3 py-2.5 border-r border-slate-100">
                       <div className="flex items-center gap-1.5 justify-between">
                         <span className="truncate max-w-[120px] text-slate-700" title={m.objet}>{m.objet}</span>
-                        {/* --- 3. Passage du fichier à onUpload --- */}
                         <DocCell doc={m.docs?.dao} label="DAO" onUpload={(f) => handleDocUpload(m.id, 'dao', f)} />
                       </div>
                     </td>
@@ -401,19 +412,71 @@ const TrackingPage: React.FC = () => {
                     </td>
 
                     {/* 30. Annulé */}
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-center">
-                      <div className="flex items-center gap-1 justify-center">
-                        <select disabled={!isAdmin} value={m.is_annule ? 'Oui' : 'Non'} onChange={(e) => handleUpdateField(m.id, 'is_annule', e.target.value === 'Oui')} className={`bg-white border rounded text-[7px] font-black outline-none ${m.is_annule ? 'text-amber-600 border-amber-200' : 'text-slate-400 border-slate-200'}`}>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-center min-w-[200px]">
+                      <div className="flex flex-col gap-1.5">
+                        <select 
+                          disabled={!isAdmin} 
+                          value={m.is_annule ? 'Oui' : 'Non'} 
+                          onChange={(e) => handleUpdateField(m.id, 'is_annule', e.target.value === 'Oui')} 
+                          className={`bg-white border rounded text-[7px] font-black outline-none w-full ${m.is_annule ? 'text-amber-600 border-amber-200' : 'text-slate-400 border-slate-200'}`}
+                        >
                           <option value="Non">NON</option>
-                          <option value="Oui">OUI</option>
+                          <option value="Oui">OUI (ANNULÉ)</option>
                         </select>
-                        {m.is_annule && <DocCell doc={m.doc_annulation_ca} label="Accord CA" onUpload={(f) => handleDocUpload(m.id, 'doc_annulation_ca', f, true)} />}
+                        
+                        {m.is_annule && (
+                          <div className="animate-in slide-in-from-top-1 fade-in duration-200 space-y-1">
+                             <input 
+                               type="text" 
+                               disabled={!isAdmin}
+                               placeholder="Motif..." 
+                               value={m.motif_annulation || ''} 
+                               onChange={(e) => handleUpdateField(m.id, 'motif_annulation', e.target.value)}
+                               className="w-full bg-amber-50 border-none rounded px-1.5 py-1 text-[8px] font-bold text-amber-800 placeholder:text-amber-300 outline-none"
+                             />
+                             <div className="flex justify-end">
+                               <DocCell doc={m.doc_annulation_ca} label="Accord CA" onUpload={(f) => handleDocUpload(m.id, 'doc_annulation_ca', f, true)} />
+                             </div>
+                          </div>
+                        )}
                       </div>
                     </td>
 
-                    {/* 31-33. Clôture */}
+                    {/* 31. Notification */}
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.notification} onChange={(v) => handleUpdateDate(m.id, 'notification', v)} /></td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-[8px] italic text-slate-400 uppercase">{m.recours || 'Néant'}</td>
+                    
+                    {/* 32. RECOURS */}
+                    <td className="px-3 py-2.5 border-r border-slate-100 min-w-[150px]">
+                      <div className="flex flex-col gap-1.5">
+                        <select 
+                          disabled={!isAdmin} 
+                          value={m.has_recours ? 'Oui' : 'Non'} 
+                          onChange={(e) => handleUpdateField(m.id, 'has_recours', e.target.value === 'Oui')}
+                          className={`bg-white border rounded text-[7px] font-black outline-none w-full ${m.has_recours ? 'text-orange-600 border-orange-200' : 'text-slate-400 border-slate-200'}`}
+                        >
+                          <option value="Non">NON</option>
+                          <option value="Oui">CONTENTIEUX</option>
+                        </select>
+                        
+                        {/* Si Recours = OUI, on affiche les champs détails */}
+                        {m.has_recours && (
+                          <div className="animate-in slide-in-from-top-1 fade-in duration-200 space-y-1">
+                             <input 
+                               type="text" 
+                               disabled={!isAdmin}
+                               placeholder="Issue/Verdict..." 
+                               value={m.recours_issue || ''} 
+                               onChange={(e) => handleUpdateField(m.id, 'recours_issue', e.target.value)}
+                               className="w-full bg-orange-50 border-none rounded px-1.5 py-1 text-[8px] font-bold text-orange-800 placeholder:text-orange-300 outline-none"
+                             />
+                             <div className="flex justify-end">
+                               <DocCell doc={m.doc_recours} label="Pièce" onUpload={(f) => handleDocUpload(m.id, 'doc_recours', f, true)} />
+                             </div>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
                     <td className="px-3 py-2.5 bg-primary/5 text-primary text-[8px] uppercase">{m.etat_avancement}</td>
                   </tr>
                 );
