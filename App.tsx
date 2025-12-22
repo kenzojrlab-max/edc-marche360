@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { 
@@ -13,7 +12,8 @@ import {
   BookOpen,
   ClipboardList,
   ShieldCheck,
-  Activity
+  Activity,
+  Layers // Ajout de l'icône Layers pour l'exécution
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import MarketList from './pages/MarketList';
@@ -89,30 +89,32 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </div>
 
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            {/* 1. Dashboard */}
             <SidebarItem to="/" icon={LayoutDashboard} label="Tableau de Bord" active={location.pathname === '/'} />
             
-            <div className="pt-4 pb-2">
-              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Opérations PPM</p>
-            </div>
+            {/* 2. Plan de Passation */}
+            <SidebarItem to="/ppm-view" icon={ClipboardList} label="Plan de Passation" active={location.pathname === '/ppm-view'} />
             
-            <SidebarItem to="/ppm-view" icon={ClipboardList} label="Plan de Passation (PPM)" active={location.pathname === '/ppm-view'} />
-            
-            <div className="pt-4 pb-2">
-              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Suivi & Exécution</p>
-            </div>
-            
-            <SidebarItem to="/tracking" icon={Activity} label="Suivi des Marchés" active={location.pathname === '/tracking'} />
-            
-            {isAdmin && (
-              <SidebarItem to="/ppm-manage" icon={ShieldCheck} label="Gestion Programmation" active={location.pathname === '/ppm-manage'} />
-            )}
-
-            <SidebarItem to="/analytics" icon={PieChart} label="Rapports & KPI" active={location.pathname === '/analytics'} />
+            {/* 3. Documentation */}
             <SidebarItem to="/documents" icon={BookOpen} label="Documentation" active={location.pathname === '/documents'} />
             
+            {/* SECTION ADMINISTRATION */}
             <div className="pt-6 pb-2">
-              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Système</p>
+              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Administration</p>
             </div>
+            
+            {/* 4a. Gestion PPM */}
+            {isAdmin && (
+              <SidebarItem to="/ppm-manage" icon={ShieldCheck} label="Gestion PPM" active={location.pathname === '/ppm-manage'} />
+            )}
+
+            {/* 4b. Suivi des marchés */}
+            <SidebarItem to="/tracking" icon={Activity} label="Suivi des marchés" active={location.pathname === '/tracking'} />
+
+            {/* 4c. Exécution des marchés */}
+            <SidebarItem to="/execution" icon={Layers} label="Exécution des marchés" active={location.pathname === '/execution'} />
+            
+            {/* 4d. Paramètres */}
             <SidebarItem to="/settings" icon={Settings} label="Paramètres" active={location.pathname === '/settings'} />
           </nav>
 
@@ -170,9 +172,11 @@ function App() {
         <Route path="/ppm-view" element={<MarketList mode="PPM" readOnly={true} />} />
         <Route path="/ppm-manage" element={<MarketList mode="PPM" readOnly={false} />} />
         <Route path="/tracking" element={<TrackingPage />} />
+        <Route path="/execution" element={<TrackingPage />} /> {/* Point d'entrée pour l'exécution */}
         <Route path="/markets/:id" element={<MarketDetail />} />
         <Route path="/documents" element={<DocumentLibrary />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/analytics" element={<Dashboard />} /> {/* Fallback pour Analytics */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

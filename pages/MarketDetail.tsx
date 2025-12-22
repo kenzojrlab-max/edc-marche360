@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { 
   ArrowLeft, FileText, Calendar, Upload, Download, XCircle, 
@@ -7,7 +6,8 @@ import {
   FileCheck, FileWarning, ClipboardList, User, DollarSign,
   Gavel, ShieldCheck, BellRing, Info, ListOrdered
 } from 'lucide-react';
-import { MOCK_MARCHES } from '../services/mockData';
+// On remplace les MOCK_MARCHES par le contexte
+import { useMarkets } from '../contexts/MarketContext'; 
 
 // --- Composant Ligne de Registre ---
 const RegistryRow = ({ 
@@ -61,9 +61,16 @@ const RegistryRow = ({
       {hasDoc && (
         <div className="flex items-center gap-2">
           {doc ? (
-            <button className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-all text-[9px] font-black uppercase">
+            /* Modification ici : Utilisation d'un lien <a> pour permettre le téléchargement */
+            <a 
+              href={doc.url} 
+              target="_blank" 
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-all text-[9px] font-black uppercase decoration-0"
+              title="Télécharger le document"
+            >
               <Download size={14} /> Doc
-            </button>
+            </a>
           ) : (
             <button className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-400 rounded-xl border border-dashed border-slate-300 hover:text-primary hover:border-primary transition-all text-[9px] font-black uppercase">
               <Upload size={14} /> Charger
@@ -77,10 +84,23 @@ const RegistryRow = ({
 
 const MarketDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [market, setMarket] = useState(MOCK_MARCHES.find(m => m.id === id));
+  // 1. On récupère les fonctions du Contexte
+  const { getMarcheById, updateMarche } = useMarkets();
+  
+  // 2. On charge le marché depuis le contexte au lieu du fichier Mock directement
+  // On utilise un state local pour gérer le formulaire, initialisé avec les données du contexte
+  const contextMarket = getMarcheById(id || '');
+  const [market, setMarket] = useState(contextMarket);
   const [activeTab, setActiveTab] = useState<'SUIVI'>('SUIVI');
 
-  if (!market) return <Navigate to="/markets" />;
+  // Si le marché n'est pas trouvé (ou id invalide)
+  if (!contextMarket) return <Navigate to="/ppm-view" />;
+  
+  // Si le state local n'est pas encore initialisé (cas rare de refresh), on le set
+  if (!market) {
+      setMarket(contextMarket);
+      return null;
+  }
 
   const handleUpdate = (field: string, val: any) => {
     setMarket({ ...market, [field]: val });
@@ -91,6 +111,14 @@ const MarketDetail: React.FC = () => {
       ...market,
       dates_realisees: { ...market.dates_realisees, [key]: val }
     } as any);
+  };
+
+  // Fonction pour sauvegarder les modifications dans le contexte global
+  const handleSave = () => {
+    if (market) {
+        updateMarche(market);
+        alert("Modifications enregistrées !");
+    }
   };
 
   return (
@@ -109,7 +137,7 @@ const MarketDetail: React.FC = () => {
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registre de Passation - EDC S.A.</p>
           </div>
         </div>
-        <button className="bg-primary text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center gap-2">
+        <button onClick={handleSave} className="bg-primary text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center gap-2 hover:scale-105 transition-transform">
           <Save size={16} /> Enregistrer
         </button>
       </div>
@@ -162,9 +190,9 @@ const MarketDetail: React.FC = () => {
                 <option value="Oui">Oui</option>
               </select>
               {market.is_infructueux && (
-                <button className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-200">
+                <a href={market.doc_infructueux?.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-200 decoration-0">
                   <Download size={14} /> Décision
-                </button>
+                </a>
               )}
             </div>
           </div>
@@ -209,9 +237,9 @@ const MarketDetail: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[9px] font-black uppercase text-slate-400 ml-2">Accord du Conseil d'Administration</label>
-                  <button className="w-full h-[52px] bg-white text-slate-900 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:bg-slate-100 transition-all">
+                  <a href={market.doc_annulation_ca?.url} target="_blank" rel="noreferrer" className="w-full h-[52px] bg-white text-slate-900 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:bg-slate-100 transition-all decoration-0">
                     <Download size={14} /> Télécharger Accord CA
-                  </button>
+                  </a>
                 </div>
               </div>
             )}

@@ -7,17 +7,26 @@ import {
   Save, 
   Upload, 
   ShieldCheck,
-  Download // <--- Nouvel import
+  Download
 } from 'lucide-react';
 import { CURRENT_USER } from '../services/mockData';
-import { JalonPassationKey, SourceFinancement, UserRole } from '../types'; // Ajout UserRole
-import { useMarkets } from '../contexts/MarketContext'; // <--- Import du Context
+import { JalonPassationKey, SourceFinancement, UserRole } from '../types';
+import { useMarkets } from '../contexts/MarketContext';
 
-// --- Composant Cellule Document (Intelligent : Admin=Upload / User=Download) ---
-const DocCell = ({ doc, label, disabled, onUpload }: { doc?: any, label: string, disabled?: boolean, onUpload?: () => void }) => {
+// --- 1. MODIFICATION : DocCell accepte maintenant un fichier en paramètre ---
+const DocCell = ({ 
+  doc, 
+  label, 
+  disabled, 
+  onUpload 
+}: { 
+  doc?: any, 
+  label: string, 
+  disabled?: boolean, 
+  onUpload?: (file: File) => void // <--- Changement de type ici
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Vérification des permissions
   const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
 
   const handleClick = (e: React.MouseEvent) => {
@@ -29,13 +38,11 @@ const DocCell = ({ doc, label, disabled, onUpload }: { doc?: any, label: string,
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      if (onUpload) onUpload();
-      // Reset input for next same-file selection
+      if (onUpload) onUpload(e.target.files[0]); // <--- On passe le vrai fichier ici
       e.target.value = '';
     }
   };
 
-  // 1. CAS UTILISATEUR SIMPLE : TÉLÉCHARGEMENT
   if (!isAdmin) {
     if (doc && !disabled) {
        return (
@@ -51,7 +58,6 @@ const DocCell = ({ doc, label, disabled, onUpload }: { doc?: any, label: string,
          </a>
        );
     }
-    // Si pas de doc ou désactivé, on affiche une petite puce vide
     return (
       <div className="flex justify-center items-center w-6 h-6 opacity-20">
         <div className="w-1 h-1 rounded-full bg-slate-400"></div>
@@ -59,7 +65,6 @@ const DocCell = ({ doc, label, disabled, onUpload }: { doc?: any, label: string,
     );
   }
 
-  // 2. CAS ADMIN : UPLOAD
   return (
     <div className={`flex justify-center items-center gap-1 flex-shrink-0 ${disabled ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
       <input 
@@ -75,7 +80,7 @@ const DocCell = ({ doc, label, disabled, onUpload }: { doc?: any, label: string,
         title={disabled ? "Non applicable" : (doc ? `Remplacer ${label}` : `Téléverser ${label}`)}
         className={`p-1 rounded border transition-all flex items-center justify-center group/btn ${
           doc 
-            ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100' // Bleu pour Admin = Fichier présent
+            ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
             : 'bg-slate-50 text-slate-400 border-dashed border-slate-300 hover:text-primary hover:border-primary hover:bg-blue-50'
         }`}
       >
@@ -85,7 +90,6 @@ const DocCell = ({ doc, label, disabled, onUpload }: { doc?: any, label: string,
   );
 };
 
-// --- Composant Input Date Administrateur ---
 const AdminDateInput = ({ value, onChange, disabled }: { value?: string, onChange: (v: string) => void, disabled?: boolean }) => (
   <input 
     type="date" 
@@ -97,14 +101,13 @@ const AdminDateInput = ({ value, onChange, disabled }: { value?: string, onChang
 );
 
 const TrackingPage: React.FC = () => {
-  const { marches, updateMarche } = useMarkets(); // <--- Utilisation du State Global
+  const { marches, updateMarche } = useMarkets();
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Vérification Admin pour toute la page
   const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
 
   const handleUpdateDate = (marketId: string, key: JalonPassationKey, value: string) => {
-    if (!isAdmin) return; // Sécurité
+    if (!isAdmin) return;
     const market = marches.find(m => m.id === marketId);
     if (market) {
       updateMarche({ ...market, dates_realisees: { ...market.dates_realisees, [key]: value } });
@@ -112,26 +115,33 @@ const TrackingPage: React.FC = () => {
   };
 
   const handleUpdateField = (marketId: string, field: string, value: any) => {
-    if (!isAdmin) return; // Sécurité
+    if (!isAdmin) return;
     const market = marches.find(m => m.id === marketId);
     if (market) {
       updateMarche({ ...market, [field]: value });
     }
   };
 
-  // Simuler le téléversement en mettant à jour le CONTEXTE
-  const handleDocUpload = (marketId: string, docKey: string, isSpecialDoc?: boolean) => {
-    if (!isAdmin) return; // Sécurité
+  // --- 2. MODIFICATION : Création d'un lien Blob URL réel ---
+  const handleDocUpload = (marketId: string, docKey: string, file: File, isSpecialDoc?: boolean) => {
+    if (!isAdmin) return;
 
     const market = marches.find(m => m.id === marketId);
     if (market) {
-        const mockPiece = { nom: 'Document_Suivi_Upload.pdf', url: '#', date_upload: new Date().toISOString().split('T')[0] };
+        // C'est ici que la magie opère : on crée un lien temporaire vers le fichier local
+        const fakeUrl = URL.createObjectURL(file);
+        
+        const newDoc = { 
+            nom: file.name, 
+            url: fakeUrl, // <--- Ce lien fonctionne maintenant !
+            date_upload: new Date().toISOString().split('T')[0] 
+        };
         
         let updatedMarket = { ...market };
         if (isSpecialDoc) {
-          updatedMarket = { ...updatedMarket, [docKey]: mockPiece };
+          updatedMarket = { ...updatedMarket, [docKey]: newDoc };
         } else {
-          updatedMarket = { ...updatedMarket, docs: { ...updatedMarket.docs, [docKey]: mockPiece } };
+          updatedMarket = { ...updatedMarket, docs: { ...updatedMarket.docs, [docKey]: newDoc } };
         }
         
         updateMarche(updatedMarket);
@@ -193,45 +203,36 @@ const TrackingPage: React.FC = () => {
                 <th colSpan={3} className="px-4 py-2 text-center bg-slate-800">31-33. Clôture</th>
               </tr>
               <tr className="bg-slate-50 text-slate-400 border-b border-slate-200 uppercase text-[8px]">
-                {/* En-têtes colonnes identiques */}
                 <th className="px-3 py-3 sticky left-0 bg-slate-50 z-20 border-r border-slate-200">1. N°</th>
                 <th className="px-3 py-3 min-w-[160px] border-r border-slate-200">2. Intitulé projet (DAO)</th>
                 <th className="px-3 py-3 border-r border-slate-200">3. Financement</th>
                 <th className="px-3 py-3 border-r border-slate-200">4. Imputation (Attest. DF)</th>
-                
                 <th className="px-3 py-3 border-r border-slate-200 text-center">5. Saisine prév. CIPM</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">6. Saisine CIPM*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">7. Examen DAO CIPM*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">8. Validation dossier (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">9. ANO Bailleur*</th>
-
                 <th className="px-3 py-3 border-r border-slate-200 text-center">10. Lancement AO*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">11. Additif (Doc)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">12. Dépouillement* (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">13. Valid. Éval. (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">14. ANO bailleurs</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">15. Ouvertures Fin. (PV)</th>
-
                 <th className="px-3 py-3 border-r border-slate-200 text-center">16. Infructueux</th>
-
                 <th className="px-3 py-3 border-r border-slate-200 text-center">17. Prop. Attrib.* (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">18. Avis conforme CA*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">19. ANO Bailleurs*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">20. Publication*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">21. Notification Attrib.</th>
-
                 <th className="px-3 py-3 border-r border-slate-200 min-w-[120px]">22. Titulaire</th>
                 <th className="px-3 py-3 border-r border-slate-200">23. Montant TTC</th>
-
                 <th className="px-3 py-3 border-r border-slate-200 text-center">24. Souscription*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">25. Saisine Projet*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">26. Examen Projet*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">27. Validation (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">28. ANO bailleurs*</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">29. Signature Marché</th>
-
                 <th className="px-3 py-3 border-r border-slate-200 text-center">30. Annulé</th>
-
                 <th className="px-3 py-3 border-r border-slate-200 text-center">31. Notification*</th>
                 <th className="px-3 py-3 border-r border-slate-200">32. Recours</th>
                 <th className="px-3 py-3">33. Etat d'avancement</th>
@@ -248,14 +249,15 @@ const TrackingPage: React.FC = () => {
                     <td className="px-3 py-2.5 border-r border-slate-100">
                       <div className="flex items-center gap-1.5 justify-between">
                         <span className="truncate max-w-[120px] text-slate-700" title={m.objet}>{m.objet}</span>
-                        <DocCell doc={m.docs?.dao} label="DAO" onUpload={() => handleDocUpload(m.id, 'dao')} />
+                        {/* --- 3. Passage du fichier à onUpload --- */}
+                        <DocCell doc={m.docs?.dao} label="DAO" onUpload={(f) => handleDocUpload(m.id, 'dao', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-slate-400 text-[8px]">{m.source_financement}</td>
                     <td className="px-3 py-2.5 border-r border-slate-100">
                       <div className="flex items-center gap-1.5 justify-between">
                         <span className="font-mono text-slate-500">{m.imputation_budgetaire}</span>
-                        <DocCell doc={m.docs?.imputation} label="Attest. DF" onUpload={() => handleDocUpload(m.id, 'imputation')} />
+                        <DocCell doc={m.docs?.imputation} label="Attest. DF" onUpload={(f) => handleDocUpload(m.id, 'imputation', f)} />
                       </div>
                     </td>
 
@@ -266,7 +268,7 @@ const TrackingPage: React.FC = () => {
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.saisine_cipm} onChange={(v) => handleUpdateDate(m.id, 'saisine_cipm', v)} />
-                        <DocCell doc={m.docs?.saisine} label="Saisine" onUpload={() => handleDocUpload(m.id, 'saisine')} />
+                        <DocCell doc={m.docs?.saisine} label="Saisine" onUpload={(f) => handleDocUpload(m.id, 'saisine', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
@@ -275,13 +277,13 @@ const TrackingPage: React.FC = () => {
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.validation_dao} onChange={(v) => handleUpdateDate(m.id, 'validation_dao', v)} />
-                        <DocCell doc={m.docs?.validation_dao} label="PV" onUpload={() => handleDocUpload(m.id, 'validation_dao')} />
+                        <DocCell doc={m.docs?.validation_dao} label="PV" onUpload={(f) => handleDocUpload(m.id, 'validation_dao', f)} />
                       </div>
                     </td>
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_dao} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_dao', v)} />
-                        <DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_dao} label="ANO" onUpload={() => handleDocUpload(m.id, 'ano_bailleur_dao')} />
+                        <DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_dao} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_dao', f)} />
                       </div>
                     </td>
 
@@ -289,37 +291,37 @@ const TrackingPage: React.FC = () => {
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.lancement_ao} onChange={(v) => handleUpdateDate(m.id, 'lancement_ao', v)} />
-                        <DocCell doc={m.docs?.lancement} label="Avis" onUpload={() => handleDocUpload(m.id, 'lancement')} />
+                        <DocCell doc={m.docs?.lancement} label="Avis" onUpload={(f) => handleDocUpload(m.id, 'lancement', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.additif} onChange={(v) => handleUpdateDate(m.id, 'additif', v)} />
-                        <DocCell doc={m.docs?.additif} label="Doc" onUpload={() => handleDocUpload(m.id, 'additif')} />
+                        <DocCell doc={m.docs?.additif} label="Doc" onUpload={(f) => handleDocUpload(m.id, 'additif', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.depouillement} onChange={(v) => handleUpdateDate(m.id, 'depouillement', v)} />
-                        <DocCell doc={m.docs?.depouillement} label="PV" onUpload={() => handleDocUpload(m.id, 'depouillement')} />
+                        <DocCell doc={m.docs?.depouillement} label="PV" onUpload={(f) => handleDocUpload(m.id, 'depouillement', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.validation_eval_offres} onChange={(v) => handleUpdateDate(m.id, 'validation_eval_offres', v)} />
-                        <DocCell doc={m.docs?.validation_eval_offres} label="PV" onUpload={() => handleDocUpload(m.id, 'validation_eval_offres')} />
+                        <DocCell doc={m.docs?.validation_eval_offres} label="PV" onUpload={(f) => handleDocUpload(m.id, 'validation_eval_offres', f)} />
                       </div>
                     </td>
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_eval} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_eval', v)} />
-                        <DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_eval} label="ANO" onUpload={() => handleDocUpload(m.id, 'ano_bailleur_eval')} />
+                        <DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_eval} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_eval', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.ouverture_financiere} onChange={(v) => handleUpdateDate(m.id, 'ouverture_financiere', v)} />
-                        <DocCell doc={m.docs?.ouverture_financiere} label="PV" onUpload={() => handleDocUpload(m.id, 'ouverture_financiere')} />
+                        <DocCell doc={m.docs?.ouverture_financiere} label="PV" onUpload={(f) => handleDocUpload(m.id, 'ouverture_financiere', f)} />
                       </div>
                     </td>
 
@@ -330,7 +332,7 @@ const TrackingPage: React.FC = () => {
                           <option value="Non">NON</option>
                           <option value="Oui">OUI</option>
                         </select>
-                        {m.is_infructueux && <DocCell doc={m.doc_infructueux} label="Décision" onUpload={() => handleDocUpload(m.id, 'doc_infructueux', true)} />}
+                        {m.is_infructueux && <DocCell doc={m.doc_infructueux} label="Décision" onUpload={(f) => handleDocUpload(m.id, 'doc_infructueux', f, true)} />}
                       </div>
                     </td>
 
@@ -338,31 +340,31 @@ const TrackingPage: React.FC = () => {
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.prop_attrib_cipm} onChange={(v) => handleUpdateDate(m.id, 'prop_attrib_cipm', v)} />
-                        <DocCell doc={m.docs?.prop_attrib_cipm} label="PV" onUpload={() => handleDocUpload(m.id, 'prop_attrib_cipm')} />
+                        <DocCell doc={m.docs?.prop_attrib_cipm} label="PV" onUpload={(f) => handleDocUpload(m.id, 'prop_attrib_cipm', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.avis_conforme_ca} onChange={(v) => handleUpdateDate(m.id, 'avis_conforme_ca', v)} />
-                        <DocCell doc={m.docs?.avis_conforme_ca} label="Avis" onUpload={() => handleDocUpload(m.id, 'avis_conforme_ca')} />
+                        <DocCell doc={m.docs?.avis_conforme_ca} label="Avis" onUpload={(f) => handleDocUpload(m.id, 'avis_conforme_ca', f)} />
                       </div>
                     </td>
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_attrib} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_attrib', v)} />
-                        <DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_attrib} label="ANO" onUpload={() => handleDocUpload(m.id, 'ano_bailleur_attrib')} />
+                        <DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_attrib} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_attrib', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.publication} onChange={(v) => handleUpdateDate(m.id, 'publication', v)} />
-                        <DocCell doc={m.docs?.publication} label="Décis." onUpload={() => handleDocUpload(m.id, 'publication')} />
+                        <DocCell doc={m.docs?.publication} label="Décis." onUpload={(f) => handleDocUpload(m.id, 'publication', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.notification_attrib} onChange={(v) => handleUpdateDate(m.id, 'notification_attrib', v)} />
-                        <DocCell doc={m.docs?.notification_attrib} label="Notif." onUpload={() => handleDocUpload(m.id, 'notification_attrib')} />
+                        <DocCell doc={m.docs?.notification_attrib} label="Notif." onUpload={(f) => handleDocUpload(m.id, 'notification_attrib', f)} />
                       </div>
                     </td>
 
@@ -375,26 +377,26 @@ const TrackingPage: React.FC = () => {
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.saisine_cipm_projet} onChange={(v) => handleUpdateDate(m.id, 'saisine_cipm_projet', v)} />
-                        <DocCell doc={m.docs?.saisine_projet} label="Saisine" onUpload={() => handleDocUpload(m.id, 'saisine_projet')} />
+                        <DocCell doc={m.docs?.saisine_projet} label="Saisine" onUpload={(f) => handleDocUpload(m.id, 'saisine_projet', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.examen_projet_cipm} onChange={(v) => handleUpdateDate(m.id, 'examen_projet_cipm', v)} /></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.validation_projet} onChange={(v) => handleUpdateDate(m.id, 'validation_projet', v)} />
-                        <DocCell doc={m.docs?.validation_projet} label="PV" onUpload={() => handleDocUpload(m.id, 'validation_projet')} />
+                        <DocCell doc={m.docs?.validation_projet} label="PV" onUpload={(f) => handleDocUpload(m.id, 'validation_projet', f)} />
                       </div>
                     </td>
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}>
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_projet} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_projet', v)} />
-                        <DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_projet} label="ANO" onUpload={() => handleDocUpload(m.id, 'ano_bailleur_projet')} />
+                        <DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_projet} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_projet', f)} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <AdminDateInput disabled={!isAdmin} value={m.dates_realisees.signature_marche} onChange={(v) => handleUpdateDate(m.id, 'signature_marche', v)} />
-                        <DocCell doc={m.docs?.signature_marche} label="Marché" onUpload={() => handleDocUpload(m.id, 'signature_marche')} />
+                        <DocCell doc={m.docs?.signature_marche} label="Marché" onUpload={(f) => handleDocUpload(m.id, 'signature_marche', f)} />
                       </div>
                     </td>
 
@@ -405,7 +407,7 @@ const TrackingPage: React.FC = () => {
                           <option value="Non">NON</option>
                           <option value="Oui">OUI</option>
                         </select>
-                        {m.is_annule && <DocCell doc={m.doc_annulation_ca} label="Accord CA" onUpload={() => handleDocUpload(m.id, 'doc_annulation_ca', true)} />}
+                        {m.is_annule && <DocCell doc={m.doc_annulation_ca} label="Accord CA" onUpload={(f) => handleDocUpload(m.id, 'doc_annulation_ca', f, true)} />}
                       </div>
                     </td>
 
