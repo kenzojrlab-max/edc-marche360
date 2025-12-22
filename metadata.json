@@ -1,0 +1,5 @@
+{
+  "name": "edc-marche360",
+  "description": "Plateforme intégrée de gestion du cycle de vie des marchés publics pour les entreprises publiques camerounaises. Suivi PPM, Passation, Exécution et Reporting.",
+  "requestFramePermissions": []
+}
