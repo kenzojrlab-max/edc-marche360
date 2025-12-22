@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { 
   Search, Lock, Unlock, AlertTriangle, FileText, Upload, Download, 
-  Plus, Trash2, CheckCircle2, AlertOctagon, X
+  Plus, Trash2, CheckCircle2, AlertOctagon, X, Save
 } from 'lucide-react';
 import { useMarkets } from '../contexts/MarketContext';
 import { formatFCFA } from '../services/mockData';
@@ -38,7 +38,9 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
   // --- LOGIQUE CONDITION STRICTE ---
   const hasSignatureDate = !!localMarket.dates_realisees.signature_marche;
   const hasSignedContract = !!localMarket.docs.marche_signe;
-  const isAccessGranted = hasSignatureDate && hasSignedContract;
+  
+  // Condition : Date renseignée OU Document uploadé
+  const isAccessGranted = hasSignatureDate || hasSignedContract;
 
   // Mise à jour générique
   const updateExec = (field: string, value: any) => {
@@ -92,7 +94,7 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
           <h2 className="text-xl font-black text-slate-800 mb-2 uppercase">Accès Refusé</h2>
           <p className="text-sm text-slate-500 mb-6 leading-relaxed">
             L'onglet exécution est verrouillé. <br/>
-            Veuillez vous assurer que :
+            Veuillez remplir au moins une condition :
           </p>
           <div className="space-y-3 text-left bg-slate-50 p-4 rounded-xl mb-6">
             <div className={`flex items-center gap-3 text-xs font-bold ${hasSignatureDate ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -136,20 +138,20 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
             onClick={() => setActiveTab('CONTRACTUEL')} 
             className={`w-full text-left px-4 py-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${activeTab === 'CONTRACTUEL' ? 'bg-white text-primary shadow-md border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            6.1. Données Contractuelles
+            Données Contractuelles
           </button>
           <button 
             onClick={() => setActiveTab('FINANCIER')} 
             className={`w-full text-left px-4 py-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${activeTab === 'FINANCIER' ? 'bg-white text-primary shadow-md border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            6.2. Gestion Financière & Incidents
+            Gestion Financière & Incidents
           </button>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-10 bg-white">
           
-          {/* TAB 6.1: DONNEES CONTRACTUELLES */}
+          {/* TAB DONNEES CONTRACTUELLES */}
           {activeTab === 'CONTRACTUEL' && (
             <div className="space-y-10 max-w-4xl">
               <div className="grid grid-cols-2 gap-8">
@@ -191,7 +193,7 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
             </div>
           )}
 
-          {/* TAB 6.2: GESTION FINANCIERE & INCIDENTS */}
+          {/* TAB GESTION FINANCIERE & INCIDENTS */}
           {activeTab === 'FINANCIER' && (
             <div className="space-y-12 max-w-5xl">
               
