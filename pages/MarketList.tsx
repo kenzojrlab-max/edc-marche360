@@ -6,13 +6,13 @@ import {
   Search, Download, Filter, Clock, Calendar, 
   Plus, FileSpreadsheet, X, FileText, FileUp, 
   ChevronDown, Building2, Landmark, ShieldCheck, Check, Layers, ArrowRight, FileCheck, AlertCircle,
-  Activity, Save, Upload, Info, Eye, Briefcase, FileSignature, Lock // Import de Lock
+  Activity, Save, Upload, Info, Eye, Briefcase, FileSignature, Lock 
 } from 'lucide-react';
 import { MOCK_PROJETS, formatFCFA, calculateDaysBetween, CONFIG_FONCTIONS } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, StatutGlobal, Marche, Projet } from '../types';
 import { useMarkets } from '../contexts/MarketContext'; 
 
-// --- COMPOSANT CELLULE DOCUMENT INTELLIGENT ---
+// --- COMPOSANT CELLULE DOCUMENT INTELLIGENT (CORRIGÉ) ---
 const DocCellInline = ({ 
   doc, 
   label, 
@@ -23,7 +23,7 @@ const DocCellInline = ({
   doc?: any, 
   label: string, 
   readOnly?: boolean, 
-  onUpload?: () => void, 
+  onUpload?: (file: File) => void, 
   disabled?: boolean 
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,7 +37,7 @@ const DocCellInline = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      if (onUpload) onUpload();
+      if (onUpload) onUpload(e.target.files[0]);
       e.target.value = '';
     }
   };
@@ -51,56 +51,53 @@ const DocCellInline = ({
     );
   }
 
-  // 2. CAS UTILISATEUR (Lecture Seule) : TÉLÉCHARGEMENT
-  if (readOnly) {
-    if (doc) {
-      return (
-        <div className="flex items-center ml-auto flex-shrink-0 pl-1">
-          <a 
-            href={doc.url} 
-            target="_blank" 
-            rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            title={`Télécharger ${label}`}
-            className="p-1 rounded border bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 shadow-sm flex items-center justify-center transition-all"
-          >
-            <Download size={10} />
-          </a>
-        </div>
-      );
-    }
-    // Affiche une icône grisée "Fantôme" si pas de doc
-    return (
-      <div className="flex items-center ml-auto flex-shrink-0 pl-1 opacity-30" title="Aucun document disponible">
-         <div className="p-1 rounded border border-slate-300 flex items-center justify-center">
-            <Download size={10} />
-         </div>
-      </div>
-    );
-  }
-
-  // 3. CAS ADMIN : TÉLÉVERSEMENT
   return (
-    <div className="flex items-center ml-auto flex-shrink-0 pl-1">
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        className="hidden" 
-        accept=".pdf,.doc,.docx,.xlsx,.jpg,.png"
-      />
-      <button 
-        type="button"
-        onClick={handleClick}
-        title={doc ? `Remplacer ${label}` : `Téléverser ${label}`}
-        className={`p-1 rounded border transition-all flex items-center justify-center group/btn ${
-          doc 
-            ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 shadow-sm' 
-            : 'bg-slate-50 text-slate-400 border-dashed border-slate-300 hover:text-primary hover:border-primary hover:bg-blue-50'
-        }`}
-      >
-        <Upload size={10} className="group-hover/btn:scale-110 transition-transform" />
-      </button>
+    <div className="flex items-center ml-auto flex-shrink-0 gap-1 pl-1">
+      {/* BOUTON TÉLÉCHARGEMENT (Visible si doc existe, pour Admin ET User) */}
+      {doc && (
+        <a 
+          href={doc.url} 
+          target="_blank" 
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          title={`Télécharger ${label}`}
+          className="p-1 rounded border bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 shadow-sm flex items-center justify-center transition-all hover:scale-110"
+        >
+          <Download size={10} />
+        </a>
+      )}
+
+      {/* ICÔNE FANTÔME (Visible seulement si lecture seule et pas de doc) */}
+      {readOnly && !doc && (
+        <div className="p-1 rounded border border-slate-300 flex items-center justify-center opacity-30" title="Aucun document disponible">
+           <Download size={10} />
+        </div>
+      )}
+
+      {/* BOUTON TÉLÉVERSEMENT (Visible seulement si Admin) */}
+      {!readOnly && (
+        <>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            className="hidden" 
+            accept=".pdf,.doc,.docx,.xlsx,.jpg,.png"
+          />
+          <button 
+            type="button"
+            onClick={handleClick}
+            title={doc ? `Remplacer ${label}` : `Téléverser ${label}`}
+            className={`p-1 rounded border transition-all flex items-center justify-center group/btn ${
+              doc 
+                ? 'bg-white text-slate-400 border-slate-200 hover:text-blue-600 hover:border-blue-300' // Style discret si doc existe déjà
+                : 'bg-slate-50 text-slate-400 border-dashed border-slate-300 hover:text-primary hover:border-primary hover:bg-blue-50'
+            }`}
+          >
+            <Upload size={10} className="group-hover/btn:scale-110 transition-transform" />
+          </button>
+        </>
+      )}
     </div>
   );
 };
@@ -205,13 +202,14 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     setActiveTab('PASSATION');
   }, [expandedMarketId]);
 
-  const handleDocUpload = (marketId: string, docKey: string, isSpecialDoc?: boolean) => {
+  const handleDocUpload = (marketId: string, docKey: string, file?: File, isSpecialDoc?: boolean) => {
     const targetMarket = marches.find(m => m.id === marketId);
-    if (!targetMarket) return;
+    if (!targetMarket || !file) return; // Modification pour accepter le fichier réel
 
+    const fakeUrl = URL.createObjectURL(file);
     const mockPiece = { 
-        nom: 'Document_Telecharge.pdf', 
-        url: '#', 
+        nom: file.name, 
+        url: fakeUrl, 
         date_upload: new Date().toISOString().split('T')[0] 
     };
 
@@ -224,13 +222,14 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     updateMarche(updatedMarket);
   };
 
-  const handleExecutionDocUpload = (marketId: string, field: string) => {
+  const handleExecutionDocUpload = (marketId: string, field: string, file: File) => {
     const targetMarket = marches.find(m => m.id === marketId);
     if (!targetMarket) return;
 
+    const fakeUrl = URL.createObjectURL(file);
     const mockPiece = { 
-        nom: 'Piece_Execution.pdf', 
-        url: '#', 
+        nom: file.name, 
+        url: fakeUrl, 
         date_upload: new Date().toISOString().split('T')[0] 
     };
 
@@ -505,55 +504,55 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                        <InlineField number="1" label="N°"><ReadOnlyValue value={m.id} /></InlineField>
                                        <InlineField number="2" label="Intitulé projet (DAO)">
                                          <ReadOnlyValue value={m.objet} />
-                                         <DocCellInline doc={m.docs?.dao} label="DAO" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'dao')} />
+                                         <DocCellInline doc={m.docs?.dao} label="DAO" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'dao', f)} />
                                        </InlineField>
                                        <InlineField number="3" label="Source de financement"><ReadOnlyValue value={m.source_financement} /></InlineField>
                                        <InlineField number="4" label="Imputation (Attest. DF)">
                                           <ReadOnlyValue value={m.imputation_budgetaire} />
-                                          <DocCellInline doc={m.docs?.imputation} label="Attest. DF" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'imputation')} />
+                                          <DocCellInline doc={m.docs?.imputation} label="Attest. DF" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'imputation', f)} />
                                        </InlineField>
                                        
-                                       <InlineField number="5" label="Saisine prévisionnelle CIPM"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_prev} isDate /><DocCellInline doc={m.docs?.saisine_prev} label="Saisine Prév" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine_prev')} /></InlineField>
-                                       <InlineField number="6" label="Saisine CIPM* (Transmis.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm} isDate /><DocCellInline doc={m.docs?.saisine} label="Docs" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine')} /></InlineField>
-                                       <InlineField number="7" label="Examen DAO CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_dao_cipm} isDate /><DocCellInline doc={m.docs?.examen_dao} label="Examen DAO" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'examen_dao')} /></InlineField>
-                                       <InlineField number="8" label="Validation dossier (PV)"><ReadOnlyValue value={m.dates_realisees.validation_dao} isDate /><DocCellInline doc={m.docs?.validation_dao} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_dao')} /></InlineField>
-                                       <InlineField number="9" label="ANO Bailleur* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_dao} isDate /><DocCellInline doc={m.docs?.ano_bailleur_dao} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_dao')} /></InlineField>
-                                       <InlineField number="10" label="Lancement AO* (Avis)"><ReadOnlyValue value={m.dates_realisees.lancement_ao} isDate /><DocCellInline doc={m.docs?.lancement} label="Avis" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'lancement')} /></InlineField>
-                                       <InlineField number="11" label="Additif (Doc)"><ReadOnlyValue value={m.dates_realisees.additif} isDate /><DocCellInline doc={m.docs?.additif} label="Additif" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'additif')} /></InlineField>
-                                       <InlineField number="12" label="Dépouillement* (PV)"><ReadOnlyValue value={m.dates_realisees.depouillement} isDate /><DocCellInline doc={m.docs?.depouillement} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'depouillement')} /></InlineField>
-                                       <InlineField number="13" label="Valid. Évaluation (PV)"><ReadOnlyValue value={m.dates_realisees.validation_eval_offres} isDate /><DocCellInline doc={m.docs?.validation_eval_offres} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_eval_offres')} /></InlineField>
-                                       <InlineField number="14" label="ANO bailleurs (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_eval} isDate /><DocCellInline doc={m.docs?.ano_bailleur_eval} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_eval')} /></InlineField>
-                                       <InlineField number="15" label="Ouvertures Fin. (PV)"><ReadOnlyValue value={m.dates_realisees.ouverture_financiere} isDate /><DocCellInline doc={m.docs?.ouverture_financiere} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ouverture_financiere')} /></InlineField>
+                                       <InlineField number="5" label="Saisine prévisionnelle CIPM"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_prev} isDate /><DocCellInline doc={m.docs?.saisine_prev} label="Saisine Prév" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'saisine_prev', f)} /></InlineField>
+                                       <InlineField number="6" label="Saisine CIPM* (Transmis.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm} isDate /><DocCellInline doc={m.docs?.saisine} label="Docs" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'saisine', f)} /></InlineField>
+                                       <InlineField number="7" label="Examen DAO CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_dao_cipm} isDate /><DocCellInline doc={m.docs?.examen_dao} label="Examen DAO" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'examen_dao', f)} /></InlineField>
+                                       <InlineField number="8" label="Validation dossier (PV)"><ReadOnlyValue value={m.dates_realisees.validation_dao} isDate /><DocCellInline doc={m.docs?.validation_dao} label="PV" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'validation_dao', f)} /></InlineField>
+                                       <InlineField number="9" label="ANO Bailleur* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_dao} isDate /><DocCellInline doc={m.docs?.ano_bailleur_dao} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_dao', f)} /></InlineField>
+                                       <InlineField number="10" label="Lancement AO* (Avis)"><ReadOnlyValue value={m.dates_realisees.lancement_ao} isDate /><DocCellInline doc={m.docs?.lancement} label="Avis" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'lancement', f)} /></InlineField>
+                                       <InlineField number="11" label="Additif (Doc)"><ReadOnlyValue value={m.dates_realisees.additif} isDate /><DocCellInline doc={m.docs?.additif} label="Additif" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'additif', f)} /></InlineField>
+                                       <InlineField number="12" label="Dépouillement* (PV)"><ReadOnlyValue value={m.dates_realisees.depouillement} isDate /><DocCellInline doc={m.docs?.depouillement} label="PV" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'depouillement', f)} /></InlineField>
+                                       <InlineField number="13" label="Valid. Évaluation (PV)"><ReadOnlyValue value={m.dates_realisees.validation_eval_offres} isDate /><DocCellInline doc={m.docs?.validation_eval_offres} label="PV" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'validation_eval_offres', f)} /></InlineField>
+                                       <InlineField number="14" label="ANO bailleurs (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_eval} isDate /><DocCellInline doc={m.docs?.ano_bailleur_eval} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_eval', f)} /></InlineField>
+                                       <InlineField number="15" label="Ouvertures Fin. (PV)"><ReadOnlyValue value={m.dates_realisees.ouverture_financiere} isDate /><DocCellInline doc={m.docs?.ouverture_financiere} label="PV" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'ouverture_financiere', f)} /></InlineField>
                                        
                                        <InlineField number="16" label="Infructueux (Décision)">
                                           <span className={`text-[7px] font-black px-1 rounded ${m.is_infructueux ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-400'}`}>{m.is_infructueux ? 'OUI' : 'NON'}</span>
-                                          <DocCellInline doc={m.doc_infructueux} label="Décision" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'doc_infructueux', true)} />
+                                          <DocCellInline doc={m.doc_infructueux} label="Décision" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'doc_infructueux', f, true)} />
                                        </InlineField>
                                        
-                                       <InlineField number="17" label="Prop. Attribution* (PV)"><ReadOnlyValue value={m.dates_realisees.prop_attrib_cipm} isDate /><DocCellInline doc={m.docs?.prop_attrib_cipm} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'prop_attrib_cipm')} /></InlineField>
-                                       <InlineField number="18" label="Avis conforme CA* (Avis)"><ReadOnlyValue value={m.dates_realisees.avis_conforme_ca} isDate /><DocCellInline doc={m.docs?.avis_conforme_ca} label="Avis" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'avis_conforme_ca')} /></InlineField>
-                                       <InlineField number="19" label="ANO Bailleurs* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_attrib} isDate /><DocCellInline doc={m.docs?.ano_bailleur_attrib} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_attrib')} /></InlineField>
-                                       <InlineField number="20" label="Publication* (Décis.)"><ReadOnlyValue value={m.dates_realisees.publication} isDate /><DocCellInline doc={m.docs?.publication} label="Décision" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'publication')} /></InlineField>
-                                       <InlineField number="21" label="Notification Attrib. (Notif.)"><ReadOnlyValue value={m.dates_realisees.notification_attrib} isDate /><DocCellInline doc={m.docs?.notification_attrib} label="Notif." readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'notification_attrib')} /></InlineField>
+                                       <InlineField number="17" label="Prop. Attribution* (PV)"><ReadOnlyValue value={m.dates_realisees.prop_attrib_cipm} isDate /><DocCellInline doc={m.docs?.prop_attrib_cipm} label="PV" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'prop_attrib_cipm', f)} /></InlineField>
+                                       <InlineField number="18" label="Avis conforme CA* (Avis)"><ReadOnlyValue value={m.dates_realisees.avis_conforme_ca} isDate /><DocCellInline doc={m.docs?.avis_conforme_ca} label="Avis" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'avis_conforme_ca', f)} /></InlineField>
+                                       <InlineField number="19" label="ANO Bailleurs* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_attrib} isDate /><DocCellInline doc={m.docs?.ano_bailleur_attrib} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_attrib', f)} /></InlineField>
+                                       <InlineField number="20" label="Publication* (Décis.)"><ReadOnlyValue value={m.dates_realisees.publication} isDate /><DocCellInline doc={m.docs?.publication} label="Décision" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'publication', f)} /></InlineField>
+                                       <InlineField number="21" label="Notification Attrib. (Notif.)"><ReadOnlyValue value={m.dates_realisees.notification_attrib} isDate /><DocCellInline doc={m.docs?.notification_attrib} label="Notif." readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'notification_attrib', f)} /></InlineField>
                                        
                                        <InlineField number="22" label="Titulaire"><ReadOnlyValue value={m.titulaire} /></InlineField>
                                        <InlineField number="23" label="Montant TTC (FCFA)"><ReadOnlyValue value={m.montant_ttc_reel} isAmount /></InlineField>
                                        
-                                       <InlineField number="24" label="Souscription Marché*"><ReadOnlyValue value={m.dates_realisees.souscription_projet} isDate /><DocCellInline doc={m.docs?.souscription} label="Souscription" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'souscription')} /></InlineField>
-                                       <InlineField number="25" label="Saisine Projet* (Trans.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_projet} isDate /><DocCellInline doc={m.docs?.saisine_projet} label="Docs" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine_projet')} /></InlineField>
-                                       <InlineField number="26" label="Examen Projet CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_projet_cipm} isDate /><DocCellInline doc={m.docs?.examen_projet} label="Examen Projet" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'examen_projet')} /></InlineField>
-                                       <InlineField number="27" label="Validation (PV)"><ReadOnlyValue value={m.dates_realisees.validation_projet} isDate /><DocCellInline doc={m.docs?.validation_projet} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_projet')} /></InlineField>
-                                       <InlineField number="28" label="ANO bailleurs* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_projet} isDate /><DocCellInline doc={m.docs?.ano_bailleur_projet} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_projet')} /></InlineField>
-                                       <InlineField number="29" label="Signature Marché (Doc)"><ReadOnlyValue value={m.dates_realisees.signature_marche} isDate /><DocCellInline doc={m.docs?.signature_marche} label="Marché" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'signature_marche')} /></InlineField>
+                                       <InlineField number="24" label="Souscription Marché*"><ReadOnlyValue value={m.dates_realisees.souscription_projet} isDate /><DocCellInline doc={m.docs?.souscription} label="Souscription" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'souscription', f)} /></InlineField>
+                                       <InlineField number="25" label="Saisine Projet* (Trans.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_projet} isDate /><DocCellInline doc={m.docs?.saisine_projet} label="Docs" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'saisine_projet', f)} /></InlineField>
+                                       <InlineField number="26" label="Examen Projet CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_projet_cipm} isDate /><DocCellInline doc={m.docs?.examen_projet} label="Examen Projet" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'examen_projet', f)} /></InlineField>
+                                       <InlineField number="27" label="Validation (PV)"><ReadOnlyValue value={m.dates_realisees.validation_projet} isDate /><DocCellInline doc={m.docs?.validation_projet} label="PV" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'validation_projet', f)} /></InlineField>
+                                       <InlineField number="28" label="ANO bailleurs* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_projet} isDate /><DocCellInline doc={m.docs?.ano_bailleur_projet} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_projet', f)} /></InlineField>
+                                       <InlineField number="29" label="Signature Marché (Doc)"><ReadOnlyValue value={m.dates_realisees.signature_marche} isDate /><DocCellInline doc={m.docs?.signature_marche} label="Marché" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'signature_marche', f)} /></InlineField>
                                        
                                        <InlineField number="30" label="Annulé (Accord CA)">
                                           <span className={`text-[7px] font-black px-1 rounded ${m.is_annule ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>{m.is_annule ? 'OUI' : 'NON'}</span>
-                                          <DocCellInline doc={m.doc_annulation_ca} label="Accord CA" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'doc_annulation_ca', true)} />
+                                          <DocCellInline doc={m.doc_annulation_ca} label="Accord CA" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'doc_annulation_ca', f, true)} />
                                        </InlineField>
                                        
-                                       <InlineField number="31" label="Notification*"><ReadOnlyValue value={m.dates_realisees.notification} isDate /><DocCellInline doc={m.docs?.notification_cloture} label="Notif" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'notification_cloture')} /></InlineField>
-                                       <InlineField number="32" label="Recours"><ReadOnlyValue value={m.recours} /><DocCellInline doc={m.docs?.recours} label="Recours" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'recours')} /></InlineField>
-                                       <InlineField number="33" label="Etat d'avancement"><span className="text-[7px] font-black text-primary bg-primary/5 px-1 py-0.5 rounded uppercase">{m.etat_avancement}</span><DocCellInline doc={m.docs?.etat_avancement_doc} label="Etat" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'etat_avancement_doc')} /></InlineField>
+                                       <InlineField number="31" label="Notification*"><ReadOnlyValue value={m.dates_realisees.notification} isDate /><DocCellInline doc={m.docs?.notification_cloture} label="Notif" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'notification_cloture', f)} /></InlineField>
+                                       <InlineField number="32" label="Recours"><ReadOnlyValue value={m.recours} /><DocCellInline doc={m.docs?.recours} label="Recours" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'recours', f, true)} /></InlineField>
+                                       <InlineField number="33" label="Etat d'avancement"><span className="text-[7px] font-black text-primary bg-primary/5 px-1 py-0.5 rounded uppercase">{m.etat_avancement}</span><DocCellInline doc={m.docs?.etat_avancement_doc} label="Etat" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'etat_avancement_doc', f)} /></InlineField>
                                      </div>
                                    )}
 
@@ -569,23 +568,29 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                         
                                         <InlineField label="Notification OS">
                                            <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
-                                           <DocCellInline doc={m.execution.doc_notification} label="Notification" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_notification')} />
+                                           <DocCellInline doc={m.execution.doc_notification} label="Notification" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_notification', f)} />
                                         </InlineField>
                                         <InlineField label="OS Démarrage">
                                            <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
-                                           <DocCellInline doc={m.execution.doc_os_demarrage} label="OS" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_os_demarrage')} />
+                                           <DocCellInline doc={m.execution.doc_os_demarrage} label="OS" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_os_demarrage', f)} />
                                         </InlineField>
                                         <InlineField label="Caution Définit.">
                                            <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
-                                           <DocCellInline doc={m.execution.doc_caution_def} label="Caution" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_caution_def')} />
+                                           <DocCellInline doc={m.execution.doc_caution_def} label="Caution" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_caution_def', f)} />
                                         </InlineField>
                                         <InlineField label="Assurance">
                                            <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
-                                           <DocCellInline doc={m.execution.doc_assurance} label="Assurance" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_assurance')} />
+                                           <DocCellInline doc={m.execution.doc_assurance} label="Assurance" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_assurance', f)} />
                                         </InlineField>
                                         <InlineField label="Enregistrement">
                                            <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
-                                           <DocCellInline doc={m.execution.doc_enregistrement} label="Impôts" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_enregistrement')} />
+                                           <DocCellInline doc={m.execution.doc_enregistrement} label="Impôts" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_enregistrement', f)} />
+                                        </InlineField>
+
+                                        {/* NOUVEAUX CHAMPS AJOUTÉS POUR TÉLÉCHARGEMENT */}
+                                        <InlineField label="Contrat Enregistré">
+                                           <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
+                                           <DocCellInline doc={m.execution.doc_contrat_enregistre} label="Contrat" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_contrat_enregistre', f)} />
                                         </InlineField>
 
                                         <div className="col-span-full mt-2 mb-1 border-b border-dashed border-slate-200 pb-1 text-[8px] font-black uppercase text-emerald-600">Suivi Financier & Évènements</div>
@@ -594,7 +599,7 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                            <span className={`text-[7px] font-black px-1 rounded ${m.execution.type_retenue_garantie === 'OPTION_B' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'}`}>
                                               {m.execution.type_retenue_garantie === 'OPTION_B' ? 'OUI' : 'NON (Retenue)'}
                                            </span>
-                                           {m.execution.type_retenue_garantie === 'OPTION_B' && <DocCellInline doc={m.execution.doc_caution_bancaire} label="Caution" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_caution_bancaire')} />}
+                                           {m.execution.type_retenue_garantie === 'OPTION_B' && <DocCellInline doc={m.execution.doc_caution_bancaire} label="Caution" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_caution_bancaire', f)} />}
                                         </InlineField>
 
                                         <InlineField label="Nb Décomptes">
@@ -611,8 +616,31 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                            <span className={`text-[7px] font-black px-1 rounded ${m.execution.is_resilie ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'}`}>
                                               {m.execution.is_resilie ? 'OUI' : 'NON'}
                                            </span>
-                                           {m.execution.is_resilie && <DocCellInline doc={m.execution.doc_decision_resiliation} label="Décision" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_decision_resiliation')} />}
+                                           {m.execution.is_resilie && <DocCellInline doc={m.execution.doc_decision_resiliation} label="Décision" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_decision_resiliation', f)} />}
                                         </InlineField>
+
+                                        {/* NOUVELLE SECTION CLÔTURE & SUIVI POUR TÉLÉCHARGEMENT */}
+                                        <div className="col-span-full mt-2 mb-1 border-b border-dashed border-slate-200 pb-1 text-[8px] font-black uppercase text-blue-600">Suivi & Clôture</div>
+
+                                        <InlineField label="Rapport Exécution">
+                                           <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
+                                           <DocCellInline doc={m.execution.doc_rapport_execution} label="Rapport" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_rapport_execution', f)} />
+                                        </InlineField>
+
+                                        <InlineField label="PV Récep. Provisoire">
+                                           <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
+                                           <DocCellInline doc={m.execution.doc_pv_reception_provisoire} label="PV Prov." readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_pv_reception_provisoire', f)} />
+                                        </InlineField>
+
+                                        <InlineField label="PV Récep. Définitive">
+                                           <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
+                                           <DocCellInline doc={m.execution.doc_pv_reception_definitive} label="PV Déf." readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_pv_reception_definitive', f)} />
+                                        </InlineField>
+
+                                        <InlineField label="Date Récep. Déf.">
+                                           <ReadOnlyValue value={m.execution.date_reception_definitive} isDate />
+                                        </InlineField>
+
                                      </div>
                                    )}
 

@@ -2,10 +2,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Search, Lock, Unlock, AlertTriangle, FileText, Upload, Download, 
-  Plus, Trash2, CheckCircle2, AlertOctagon, X, Save, Layers // Ajout de Layers
+  Plus, Trash2, CheckCircle2, AlertOctagon, X, Save, Layers, Flag
 } from 'lucide-react';
 import { useMarkets } from '../contexts/MarketContext';
-import { formatFCFA, MOCK_PROJETS } from '../services/mockData'; // Import de MOCK_PROJETS
+import { formatFCFA, MOCK_PROJETS } from '../services/mockData';
 import { Marche, Decompte, Avenant } from '../types';
 
 // --- Composant Bouton Upload Simple ---
@@ -154,9 +154,10 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
           
           {/* TAB DONNEES CONTRACTUELLES */}
           {activeTab === 'CONTRACTUEL' && (
-            <div className="space-y-10 max-w-4xl">
+            <div className="space-y-10 max-w-5xl">
               <div className="grid grid-cols-2 gap-8">
-                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4">
+                {/* COLONNE GAUCHE : INFO CLES */}
+                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4 h-fit">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Informations Clés</h3>
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-slate-400 uppercase">Numéro Marché</label>
@@ -180,15 +181,51 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Documents de Démarrage</h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    <UploadBtn label="Notification" hasDoc={!!localMarket.execution.doc_notification} url={localMarket.execution.doc_notification?.url} onUpload={(f:File) => handleUpload('doc_notification', f)} />
-                    <UploadBtn label="OS de Démarrage" hasDoc={!!localMarket.execution.doc_os_demarrage} url={localMarket.execution.doc_os_demarrage?.url} onUpload={(f:File) => handleUpload('doc_os_demarrage', f)} />
-                    <UploadBtn label="Cautionnement Définitif" hasDoc={!!localMarket.execution.doc_caution_def} url={localMarket.execution.doc_caution_def?.url} onUpload={(f:File) => handleUpload('doc_caution_def', f)} />
-                    <UploadBtn label="Police d'Assurance" hasDoc={!!localMarket.execution.doc_assurance} url={localMarket.execution.doc_assurance?.url} onUpload={(f:File) => handleUpload('doc_assurance', f)} />
-                    <UploadBtn label="Enregistrement (Impôts)" hasDoc={!!localMarket.execution.doc_enregistrement} url={localMarket.execution.doc_enregistrement?.url} onUpload={(f:File) => handleUpload('doc_enregistrement', f)} />
+                {/* COLONNE DROITE : DOCUMENTS */}
+                <div className="space-y-8">
+                  {/* Démarrage */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><FileText size={14} /> Démarrage & Administratif</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <UploadBtn label="Notification" hasDoc={!!localMarket.execution.doc_notification} url={localMarket.execution.doc_notification?.url} onUpload={(f:File) => handleUpload('doc_notification', f)} />
+                      <UploadBtn label="OS de Démarrage" hasDoc={!!localMarket.execution.doc_os_demarrage} url={localMarket.execution.doc_os_demarrage?.url} onUpload={(f:File) => handleUpload('doc_os_demarrage', f)} />
+                      <UploadBtn label="Cautionnement Définitif" hasDoc={!!localMarket.execution.doc_caution_def} url={localMarket.execution.doc_caution_def?.url} onUpload={(f:File) => handleUpload('doc_caution_def', f)} />
+                      <UploadBtn label="Police d'Assurance" hasDoc={!!localMarket.execution.doc_assurance} url={localMarket.execution.doc_assurance?.url} onUpload={(f:File) => handleUpload('doc_assurance', f)} />
+                      <UploadBtn label="Enregistrement (Impôts)" hasDoc={!!localMarket.execution.doc_enregistrement} url={localMarket.execution.doc_enregistrement?.url} onUpload={(f:File) => handleUpload('doc_enregistrement', f)} />
+                      {/* NOUVEAU : Contrat Enregistré */}
+                      <UploadBtn label="Contrat Enregistré" hasDoc={!!localMarket.execution.doc_contrat_enregistre} url={localMarket.execution.doc_contrat_enregistre?.url} onUpload={(f:File) => handleUpload('doc_contrat_enregistre', f)} />
+                    </div>
                   </div>
+
+                  {/* Suivi */}
+                  <div className="space-y-3">
+                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Layers size={14} /> Suivi d'Exécution</h3>
+                     <div className="grid grid-cols-2 gap-3">
+                        {/* NOUVEAU : Rapport d'exécution */}
+                        <UploadBtn label="Rapport d'Exécution" hasDoc={!!localMarket.execution.doc_rapport_execution} url={localMarket.execution.doc_rapport_execution?.url} onUpload={(f:File) => handleUpload('doc_rapport_execution', f)} />
+                     </div>
+                  </div>
+
+                  {/* Clôture */}
+                  <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 space-y-4">
+                     <h3 className="text-xs font-black text-emerald-700 uppercase tracking-widest flex items-center gap-2"><Flag size={14} /> Clôture du Marché</h3>
+                     <div className="grid grid-cols-2 gap-4">
+                        <UploadBtn label="PV Réception Provisoire" hasDoc={!!localMarket.execution.doc_pv_reception_provisoire} url={localMarket.execution.doc_pv_reception_provisoire?.url} onUpload={(f:File) => handleUpload('doc_pv_reception_provisoire', f)} color="green" />
+                        <div className="space-y-2">
+                           <UploadBtn label="PV Réception Définitive" hasDoc={!!localMarket.execution.doc_pv_reception_definitive} url={localMarket.execution.doc_pv_reception_definitive?.url} onUpload={(f:File) => handleUpload('doc_pv_reception_definitive', f)} color="green" />
+                           <div className="pt-1">
+                              <label className="text-[8px] font-black uppercase text-emerald-600">Date Réception Déf.</label>
+                              <input 
+                                type="date" 
+                                value={localMarket.execution.date_reception_definitive || ''} 
+                                onChange={(e) => updateExec('date_reception_definitive', e.target.value)}
+                                className="w-full bg-white border border-emerald-200 rounded px-2 py-1 text-[10px] font-black outline-none text-emerald-800"
+                              />
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+
                 </div>
               </div>
             </div>

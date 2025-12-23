@@ -1,3 +1,4 @@
+// types.ts
 export enum UserRole {
   ADMIN = 'ADMIN',
   SUPER_ADMIN = 'SUPER_ADMIN',
@@ -43,7 +44,7 @@ export type JalonPassationKey =
   | 'examen_projet_cipm' | 'validation_projet' | 'ano_bailleur_projet' 
   | 'signature_marche' | 'notification';
 
-// --- NOUVEAUX TYPES POUR L'EXECUTION (AJOUTÉS) ---
+// --- NOUVEAUX TYPES POUR L'EXECUTION ---
 
 export interface Decompte {
   id: string;
@@ -77,6 +78,10 @@ export interface ExecutionData {
   doc_assurance?: PieceJointe;
   doc_enregistrement?: PieceJointe;
 
+  // Documents contractuels supplémentaires
+  doc_contrat_enregistre?: PieceJointe;
+  doc_rapport_execution?: PieceJointe; // Peut être périodique, ici simplifié à un rapport global ou le dernier en date
+
   // 6.2 Gestion Financière
   decomptes: Decompte[];
   
@@ -92,6 +97,11 @@ export interface ExecutionData {
   doc_mise_en_demeure?: PieceJointe;
   doc_constat_carence?: PieceJointe;
   doc_decision_resiliation?: PieceJointe;
+
+  // Clôture du marché
+  doc_pv_reception_provisoire?: PieceJointe;
+  doc_pv_reception_definitive?: PieceJointe;
+  date_reception_definitive?: string;
 }
 
 export interface Projet {
@@ -141,7 +151,7 @@ export interface Marche {
   titulaire?: string;
   montant_ttc_reel?: number;
 
-  // NOUVEAU CHAMP EXECUTION (AJOUTÉ)
+  // CHAMP EXECUTION
   execution: ExecutionData;
 }
 
