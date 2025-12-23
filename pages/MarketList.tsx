@@ -6,7 +6,7 @@ import {
   Search, Download, Filter, Clock, Calendar, 
   Plus, FileSpreadsheet, X, FileText, FileUp, 
   ChevronDown, Building2, Landmark, ShieldCheck, Check, Layers, ArrowRight, FileCheck, AlertCircle,
-  Activity, Save, Upload, Info, Eye
+  Activity, Save, Upload, Info, Eye, Briefcase, FileSignature, Lock // Import de Lock
 } from 'lucide-react';
 import { MOCK_PROJETS, formatFCFA, calculateDaysBetween, CONFIG_FONCTIONS } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, StatutGlobal, Marche, Projet } from '../types';
@@ -109,7 +109,7 @@ const DocCellInline = ({
 const InlineField = ({ label, number, children, disabled }: any) => (
   <div className={`flex flex-col space-y-0 p-1.5 rounded-md border transition-all min-w-0 ${disabled ? 'bg-slate-50 border-slate-100 opacity-40 grayscale' : 'bg-white border-slate-100 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:bg-slate-50/80'}`}>
     <div className="flex items-center gap-1 mb-0.5">
-      <span className="text-[7px] font-black text-slate-300 flex-shrink-0">{number}.</span>
+      {number && <span className="text-[7px] font-black text-slate-300 flex-shrink-0">{number}.</span>}
       <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter truncate" title={label}>{label}</span>
     </div>
     <div className="min-h-[14px] flex items-center gap-1 overflow-hidden relative">
@@ -124,7 +124,6 @@ const ReadOnlyValue = ({ value, isDate = false, isAmount = false }: { value?: an
   </span>
 );
 
-// ... (Select et Input restent inchangés mais inclus pour compilation) ...
 const CustomBulleSelect = ({ value, onChange, options, placeholder, disabled }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -181,6 +180,9 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
   const [selectedYear, setSelectedYear] = useState(2024);
   const [selectedProjetId, setSelectedProjetId] = useState<string | null>(null);
   const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
+  
+  // NOUVEAU : Gestion des onglets dans la vue détaillée
+  const [activeTab, setActiveTab] = useState<'PASSATION' | 'EXECUTION'>('PASSATION');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -198,6 +200,11 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     dates_prevues: {} as any, statut_global: StatutGlobal.PLANIFIE, hors_ppm: false, exercice: 2024
   });
 
+  // Reset tab when expanded row changes
+  useEffect(() => {
+    setActiveTab('PASSATION');
+  }, [expandedMarketId]);
+
   const handleDocUpload = (marketId: string, docKey: string, isSpecialDoc?: boolean) => {
     const targetMarket = marches.find(m => m.id === marketId);
     if (!targetMarket) return;
@@ -214,6 +221,27 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     } else {
       updatedMarket = { ...updatedMarket, docs: { ...updatedMarket.docs, [docKey]: mockPiece } };
     }
+    updateMarche(updatedMarket);
+  };
+
+  const handleExecutionDocUpload = (marketId: string, field: string) => {
+    const targetMarket = marches.find(m => m.id === marketId);
+    if (!targetMarket) return;
+
+    const mockPiece = { 
+        nom: 'Piece_Execution.pdf', 
+        url: '#', 
+        date_upload: new Date().toISOString().split('T')[0] 
+    };
+
+    // Update nested execution object
+    const updatedMarket = { 
+        ...targetMarket, 
+        execution: { 
+            ...targetMarket.execution, 
+            [field]: mockPiece 
+        } 
+    };
     updateMarche(updatedMarket);
   };
 
@@ -240,7 +268,8 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
       source_financement: currentProjet?.source_financement || SourceFinancement.BUDGET_EDC,
       bailleur_nom: currentProjet?.bailleur_nom, statut_global: StatutGlobal.PLANIFIE,
       hors_ppm: false, docs: {}, is_infructueux: false, is_annule: false, recours: 'Néant',
-      etat_avancement: 'Inscrit au PPM', dates_realisees: {} as any
+      etat_avancement: 'Inscrit au PPM', dates_realisees: {} as any,
+      execution: { decomptes: [], avenants: [], type_retenue_garantie: 'OPTION_A', has_avenant: false, is_resilie: false }
     };
     addMarche(newMarket);
     setIsModalOpen(false);
@@ -394,6 +423,9 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                      const delaiReel = calculateDaysBetween(m.dates_realisees.saisine_cipm, m.dates_realisees.signature_marche);
                      const isEDC = m.source_financement === SourceFinancement.BUDGET_EDC;
                      
+                     // --- LOGIQUE DE VERROUILLAGE ---
+                     const isExecutionLocked = !m.dates_realisees.signature_marche;
+
                      return (
                        <React.Fragment key={m.id}>
                          <tr 
@@ -429,71 +461,161 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                            <tr className="bg-slate-50/60">
                              <td colSpan={6 + (jalonCols.length * 2) + 2} className="px-2 py-1.5">
                                <div className="bg-white rounded-lg border border-primary/10 shadow-lg overflow-hidden animate-in slide-in-from-top-1 duration-200">
+                                 {/* HEADER MODAL INLINE */}
                                  <div className="bg-primary/5 px-4 py-1 border-b border-primary/10 flex items-center justify-between">
-                                   <div className="flex items-center gap-2 text-primary font-black uppercase text-[8px] tracking-widest">
-                                     <Activity size={10} />
-                                     Registre de Pilotage (Téléchargement) : {m.id}
+                                   <div className="flex items-center gap-4">
+                                      <div className="flex items-center gap-2 text-primary font-black uppercase text-[8px] tracking-widest">
+                                        <Activity size={10} />
+                                        Registre de Pilotage (Téléchargement) : {m.id}
+                                      </div>
+                                      
+                                      {/* --- ONGLETS PASSATION / EXECUTION --- */}
+                                      <div className="flex gap-1 ml-4 bg-white/50 p-0.5 rounded-lg border border-primary/5">
+                                         <button 
+                                            onClick={() => setActiveTab('PASSATION')}
+                                            className={`px-3 py-1 rounded-md text-[8px] font-black uppercase transition-all ${activeTab === 'PASSATION' ? 'bg-primary text-white shadow-sm' : 'text-slate-400 hover:text-primary'}`}
+                                         >
+                                            <div className="flex items-center gap-1"><Briefcase size={8} /> Phase Passation</div>
+                                         </button>
+                                         <button 
+                                            onClick={() => !isExecutionLocked && setActiveTab('EXECUTION')}
+                                            disabled={isExecutionLocked}
+                                            title={isExecutionLocked ? "Date de signature requise dans le Suivi" : ""}
+                                            className={`px-3 py-1 rounded-md text-[8px] font-black uppercase transition-all flex items-center gap-1 ${
+                                              activeTab === 'EXECUTION' 
+                                                ? 'bg-emerald-600 text-white shadow-sm' 
+                                                : isExecutionLocked 
+                                                  ? 'bg-slate-100 text-slate-300 cursor-not-allowed' 
+                                                  : 'text-slate-400 hover:text-emerald-600'
+                                            }`}
+                                         >
+                                            {isExecutionLocked ? <Lock size={8} /> : <FileSignature size={8} />} Phase Exécution
+                                         </button>
+                                      </div>
                                    </div>
                                    <button onClick={() => setExpandedMarketId(null)} className="p-0.5 hover:bg-primary/10 rounded text-primary"><X size={10} /></button>
                                  </div>
                                  
-                                 <div className="p-1.5 grid grid-cols-4 md:grid-cols-6 lg:grid-cols-10 gap-1.5">
-                                   <InlineField number="1" label="N°"><ReadOnlyValue value={m.id} /></InlineField>
+                                 {/* CONTENU ONGLETS */}
+                                 <div className="p-1.5 min-h-[150px]">
                                    
-                                   {/* ICI: INTITULE AVEC BOUTON DE TELECHARGEMENT */}
-                                   <InlineField number="2" label="Intitulé projet (DAO)">
-                                     <ReadOnlyValue value={m.objet} />
-                                     <DocCellInline doc={m.docs?.dao} label="DAO" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'dao')} />
-                                   </InlineField>
-                                   
-                                   <InlineField number="3" label="Source de financement"><ReadOnlyValue value={m.source_financement} /></InlineField>
-                                   
-                                   <InlineField number="4" label="Imputation (Attest. DF)">
-                                      <ReadOnlyValue value={m.imputation_budgetaire} />
-                                      <DocCellInline doc={m.docs?.imputation} label="Attest. DF" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'imputation')} />
-                                   </InlineField>
-                                   
-                                   <InlineField number="5" label="Saisine prévisionnelle CIPM"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_prev} isDate /><DocCellInline doc={m.docs?.saisine_prev} label="Saisine Prév" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine_prev')} /></InlineField>
-                                   <InlineField number="6" label="Saisine CIPM* (Transmis.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm} isDate /><DocCellInline doc={m.docs?.saisine} label="Docs" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine')} /></InlineField>
-                                   <InlineField number="7" label="Examen DAO CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_dao_cipm} isDate /><DocCellInline doc={m.docs?.examen_dao} label="Examen DAO" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'examen_dao')} /></InlineField>
-                                   <InlineField number="8" label="Validation dossier (PV)"><ReadOnlyValue value={m.dates_realisees.validation_dao} isDate /><DocCellInline doc={m.docs?.validation_dao} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_dao')} /></InlineField>
-                                   <InlineField number="9" label="ANO Bailleur* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_dao} isDate /><DocCellInline doc={m.docs?.ano_bailleur_dao} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_dao')} /></InlineField>
-                                   <InlineField number="10" label="Lancement AO* (Avis)"><ReadOnlyValue value={m.dates_realisees.lancement_ao} isDate /><DocCellInline doc={m.docs?.lancement} label="Avis" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'lancement')} /></InlineField>
-                                   <InlineField number="11" label="Additif (Doc)"><ReadOnlyValue value={m.dates_realisees.additif} isDate /><DocCellInline doc={m.docs?.additif} label="Additif" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'additif')} /></InlineField>
-                                   <InlineField number="12" label="Dépouillement* (PV)"><ReadOnlyValue value={m.dates_realisees.depouillement} isDate /><DocCellInline doc={m.docs?.depouillement} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'depouillement')} /></InlineField>
-                                   <InlineField number="13" label="Valid. Évaluation (PV)"><ReadOnlyValue value={m.dates_realisees.validation_eval_offres} isDate /><DocCellInline doc={m.docs?.validation_eval_offres} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_eval_offres')} /></InlineField>
-                                   <InlineField number="14" label="ANO bailleurs (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_eval} isDate /><DocCellInline doc={m.docs?.ano_bailleur_eval} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_eval')} /></InlineField>
-                                   <InlineField number="15" label="Ouvertures Fin. (PV)"><ReadOnlyValue value={m.dates_realisees.ouverture_financiere} isDate /><DocCellInline doc={m.docs?.ouverture_financiere} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ouverture_financiere')} /></InlineField>
-                                   
-                                   <InlineField number="16" label="Infructueux (Décision)">
-                                      <span className={`text-[7px] font-black px-1 rounded ${m.is_infructueux ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-400'}`}>{m.is_infructueux ? 'OUI' : 'NON'}</span>
-                                      <DocCellInline doc={m.doc_infructueux} label="Décision" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'doc_infructueux', true)} />
-                                   </InlineField>
-                                   
-                                   <InlineField number="17" label="Prop. Attribution* (PV)"><ReadOnlyValue value={m.dates_realisees.prop_attrib_cipm} isDate /><DocCellInline doc={m.docs?.prop_attrib_cipm} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'prop_attrib_cipm')} /></InlineField>
-                                   <InlineField number="18" label="Avis conforme CA* (Avis)"><ReadOnlyValue value={m.dates_realisees.avis_conforme_ca} isDate /><DocCellInline doc={m.docs?.avis_conforme_ca} label="Avis" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'avis_conforme_ca')} /></InlineField>
-                                   <InlineField number="19" label="ANO Bailleurs* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_attrib} isDate /><DocCellInline doc={m.docs?.ano_bailleur_attrib} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_attrib')} /></InlineField>
-                                   <InlineField number="20" label="Publication* (Décis.)"><ReadOnlyValue value={m.dates_realisees.publication} isDate /><DocCellInline doc={m.docs?.publication} label="Décision" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'publication')} /></InlineField>
-                                   <InlineField number="21" label="Notification Attrib. (Notif.)"><ReadOnlyValue value={m.dates_realisees.notification_attrib} isDate /><DocCellInline doc={m.docs?.notification_attrib} label="Notif." readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'notification_attrib')} /></InlineField>
-                                   
-                                   <InlineField number="22" label="Titulaire"><ReadOnlyValue value={m.titulaire} /></InlineField>
-                                   <InlineField number="23" label="Montant TTC (FCFA)"><ReadOnlyValue value={m.montant_ttc_reel} isAmount /></InlineField>
-                                   
-                                   <InlineField number="24" label="Souscription Marché*"><ReadOnlyValue value={m.dates_realisees.souscription_projet} isDate /><DocCellInline doc={m.docs?.souscription} label="Souscription" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'souscription')} /></InlineField>
-                                   <InlineField number="25" label="Saisine Projet* (Trans.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_projet} isDate /><DocCellInline doc={m.docs?.saisine_projet} label="Docs" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine_projet')} /></InlineField>
-                                   <InlineField number="26" label="Examen Projet CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_projet_cipm} isDate /><DocCellInline doc={m.docs?.examen_projet} label="Examen Projet" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'examen_projet')} /></InlineField>
-                                   <InlineField number="27" label="Validation (PV)"><ReadOnlyValue value={m.dates_realisees.validation_projet} isDate /><DocCellInline doc={m.docs?.validation_projet} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_projet')} /></InlineField>
-                                   <InlineField number="28" label="ANO bailleurs* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_projet} isDate /><DocCellInline doc={m.docs?.ano_bailleur_projet} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_projet')} /></InlineField>
-                                   <InlineField number="29" label="Signature Marché (Doc)"><ReadOnlyValue value={m.dates_realisees.signature_marche} isDate /><DocCellInline doc={m.docs?.signature_marche} label="Marché" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'signature_marche')} /></InlineField>
-                                   
-                                   <InlineField number="30" label="Annulé (Accord CA)">
-                                      <span className={`text-[7px] font-black px-1 rounded ${m.is_annule ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>{m.is_annule ? 'OUI' : 'NON'}</span>
-                                      <DocCellInline doc={m.doc_annulation_ca} label="Accord CA" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'doc_annulation_ca', true)} />
-                                   </InlineField>
-                                   
-                                   <InlineField number="31" label="Notification*"><ReadOnlyValue value={m.dates_realisees.notification} isDate /><DocCellInline doc={m.docs?.notification_cloture} label="Notif" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'notification_cloture')} /></InlineField>
-                                   <InlineField number="32" label="Recours"><ReadOnlyValue value={m.recours} /><DocCellInline doc={m.docs?.recours} label="Recours" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'recours')} /></InlineField>
-                                   <InlineField number="33" label="Etat d'avancement"><span className="text-[7px] font-black text-primary bg-primary/5 px-1 py-0.5 rounded uppercase">{m.etat_avancement}</span><DocCellInline doc={m.docs?.etat_avancement_doc} label="Etat" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'etat_avancement_doc')} /></InlineField>
+                                   {/* --- VUE PASSATION --- */}
+                                   {activeTab === 'PASSATION' && (
+                                     <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-10 gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+                                       <InlineField number="1" label="N°"><ReadOnlyValue value={m.id} /></InlineField>
+                                       <InlineField number="2" label="Intitulé projet (DAO)">
+                                         <ReadOnlyValue value={m.objet} />
+                                         <DocCellInline doc={m.docs?.dao} label="DAO" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'dao')} />
+                                       </InlineField>
+                                       <InlineField number="3" label="Source de financement"><ReadOnlyValue value={m.source_financement} /></InlineField>
+                                       <InlineField number="4" label="Imputation (Attest. DF)">
+                                          <ReadOnlyValue value={m.imputation_budgetaire} />
+                                          <DocCellInline doc={m.docs?.imputation} label="Attest. DF" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'imputation')} />
+                                       </InlineField>
+                                       
+                                       <InlineField number="5" label="Saisine prévisionnelle CIPM"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_prev} isDate /><DocCellInline doc={m.docs?.saisine_prev} label="Saisine Prév" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine_prev')} /></InlineField>
+                                       <InlineField number="6" label="Saisine CIPM* (Transmis.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm} isDate /><DocCellInline doc={m.docs?.saisine} label="Docs" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine')} /></InlineField>
+                                       <InlineField number="7" label="Examen DAO CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_dao_cipm} isDate /><DocCellInline doc={m.docs?.examen_dao} label="Examen DAO" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'examen_dao')} /></InlineField>
+                                       <InlineField number="8" label="Validation dossier (PV)"><ReadOnlyValue value={m.dates_realisees.validation_dao} isDate /><DocCellInline doc={m.docs?.validation_dao} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_dao')} /></InlineField>
+                                       <InlineField number="9" label="ANO Bailleur* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_dao} isDate /><DocCellInline doc={m.docs?.ano_bailleur_dao} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_dao')} /></InlineField>
+                                       <InlineField number="10" label="Lancement AO* (Avis)"><ReadOnlyValue value={m.dates_realisees.lancement_ao} isDate /><DocCellInline doc={m.docs?.lancement} label="Avis" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'lancement')} /></InlineField>
+                                       <InlineField number="11" label="Additif (Doc)"><ReadOnlyValue value={m.dates_realisees.additif} isDate /><DocCellInline doc={m.docs?.additif} label="Additif" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'additif')} /></InlineField>
+                                       <InlineField number="12" label="Dépouillement* (PV)"><ReadOnlyValue value={m.dates_realisees.depouillement} isDate /><DocCellInline doc={m.docs?.depouillement} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'depouillement')} /></InlineField>
+                                       <InlineField number="13" label="Valid. Évaluation (PV)"><ReadOnlyValue value={m.dates_realisees.validation_eval_offres} isDate /><DocCellInline doc={m.docs?.validation_eval_offres} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_eval_offres')} /></InlineField>
+                                       <InlineField number="14" label="ANO bailleurs (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_eval} isDate /><DocCellInline doc={m.docs?.ano_bailleur_eval} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_eval')} /></InlineField>
+                                       <InlineField number="15" label="Ouvertures Fin. (PV)"><ReadOnlyValue value={m.dates_realisees.ouverture_financiere} isDate /><DocCellInline doc={m.docs?.ouverture_financiere} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ouverture_financiere')} /></InlineField>
+                                       
+                                       <InlineField number="16" label="Infructueux (Décision)">
+                                          <span className={`text-[7px] font-black px-1 rounded ${m.is_infructueux ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-400'}`}>{m.is_infructueux ? 'OUI' : 'NON'}</span>
+                                          <DocCellInline doc={m.doc_infructueux} label="Décision" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'doc_infructueux', true)} />
+                                       </InlineField>
+                                       
+                                       <InlineField number="17" label="Prop. Attribution* (PV)"><ReadOnlyValue value={m.dates_realisees.prop_attrib_cipm} isDate /><DocCellInline doc={m.docs?.prop_attrib_cipm} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'prop_attrib_cipm')} /></InlineField>
+                                       <InlineField number="18" label="Avis conforme CA* (Avis)"><ReadOnlyValue value={m.dates_realisees.avis_conforme_ca} isDate /><DocCellInline doc={m.docs?.avis_conforme_ca} label="Avis" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'avis_conforme_ca')} /></InlineField>
+                                       <InlineField number="19" label="ANO Bailleurs* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_attrib} isDate /><DocCellInline doc={m.docs?.ano_bailleur_attrib} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_attrib')} /></InlineField>
+                                       <InlineField number="20" label="Publication* (Décis.)"><ReadOnlyValue value={m.dates_realisees.publication} isDate /><DocCellInline doc={m.docs?.publication} label="Décision" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'publication')} /></InlineField>
+                                       <InlineField number="21" label="Notification Attrib. (Notif.)"><ReadOnlyValue value={m.dates_realisees.notification_attrib} isDate /><DocCellInline doc={m.docs?.notification_attrib} label="Notif." readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'notification_attrib')} /></InlineField>
+                                       
+                                       <InlineField number="22" label="Titulaire"><ReadOnlyValue value={m.titulaire} /></InlineField>
+                                       <InlineField number="23" label="Montant TTC (FCFA)"><ReadOnlyValue value={m.montant_ttc_reel} isAmount /></InlineField>
+                                       
+                                       <InlineField number="24" label="Souscription Marché*"><ReadOnlyValue value={m.dates_realisees.souscription_projet} isDate /><DocCellInline doc={m.docs?.souscription} label="Souscription" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'souscription')} /></InlineField>
+                                       <InlineField number="25" label="Saisine Projet* (Trans.)"><ReadOnlyValue value={m.dates_realisees.saisine_cipm_projet} isDate /><DocCellInline doc={m.docs?.saisine_projet} label="Docs" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'saisine_projet')} /></InlineField>
+                                       <InlineField number="26" label="Examen Projet CIPM*"><ReadOnlyValue value={m.dates_realisees.examen_projet_cipm} isDate /><DocCellInline doc={m.docs?.examen_projet} label="Examen Projet" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'examen_projet')} /></InlineField>
+                                       <InlineField number="27" label="Validation (PV)"><ReadOnlyValue value={m.dates_realisees.validation_projet} isDate /><DocCellInline doc={m.docs?.validation_projet} label="PV" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'validation_projet')} /></InlineField>
+                                       <InlineField number="28" label="ANO bailleurs* (ANO)" disabled={isEDC}><ReadOnlyValue value={m.dates_realisees.ano_bailleur_projet} isDate /><DocCellInline doc={m.docs?.ano_bailleur_projet} label="ANO" disabled={isEDC} readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'ano_bailleur_projet')} /></InlineField>
+                                       <InlineField number="29" label="Signature Marché (Doc)"><ReadOnlyValue value={m.dates_realisees.signature_marche} isDate /><DocCellInline doc={m.docs?.signature_marche} label="Marché" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'signature_marche')} /></InlineField>
+                                       
+                                       <InlineField number="30" label="Annulé (Accord CA)">
+                                          <span className={`text-[7px] font-black px-1 rounded ${m.is_annule ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>{m.is_annule ? 'OUI' : 'NON'}</span>
+                                          <DocCellInline doc={m.doc_annulation_ca} label="Accord CA" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'doc_annulation_ca', true)} />
+                                       </InlineField>
+                                       
+                                       <InlineField number="31" label="Notification*"><ReadOnlyValue value={m.dates_realisees.notification} isDate /><DocCellInline doc={m.docs?.notification_cloture} label="Notif" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'notification_cloture')} /></InlineField>
+                                       <InlineField number="32" label="Recours"><ReadOnlyValue value={m.recours} /><DocCellInline doc={m.docs?.recours} label="Recours" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'recours')} /></InlineField>
+                                       <InlineField number="33" label="Etat d'avancement"><span className="text-[7px] font-black text-primary bg-primary/5 px-1 py-0.5 rounded uppercase">{m.etat_avancement}</span><DocCellInline doc={m.docs?.etat_avancement_doc} label="Etat" readOnly={readOnly} onUpload={() => handleDocUpload(m.id, 'etat_avancement_doc')} /></InlineField>
+                                     </div>
+                                   )}
+
+                                   {/* --- VUE EXECUTION --- */}
+                                   {activeTab === 'EXECUTION' && (
+                                     <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-10 gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+                                        <div className="col-span-full mb-1 border-b border-dashed border-slate-200 pb-1 text-[8px] font-black uppercase text-slate-400">Données Contractuelles & Démarrage</div>
+                                        
+                                        <InlineField label="Réf Contrat"><ReadOnlyValue value={m.execution.ref_contrat || 'Non renseigné'} /></InlineField>
+                                        <InlineField label="Titulaire"><ReadOnlyValue value={m.titulaire} /></InlineField>
+                                        <InlineField label="Montant TTC"><ReadOnlyValue value={m.montant_ttc_reel} isAmount /></InlineField>
+                                        <InlineField label="Délai (Mois)"><ReadOnlyValue value={m.execution.delai_execution} /></InlineField>
+                                        
+                                        <InlineField label="Notification OS">
+                                           <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
+                                           <DocCellInline doc={m.execution.doc_notification} label="Notification" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_notification')} />
+                                        </InlineField>
+                                        <InlineField label="OS Démarrage">
+                                           <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
+                                           <DocCellInline doc={m.execution.doc_os_demarrage} label="OS" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_os_demarrage')} />
+                                        </InlineField>
+                                        <InlineField label="Caution Définit.">
+                                           <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
+                                           <DocCellInline doc={m.execution.doc_caution_def} label="Caution" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_caution_def')} />
+                                        </InlineField>
+                                        <InlineField label="Assurance">
+                                           <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
+                                           <DocCellInline doc={m.execution.doc_assurance} label="Assurance" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_assurance')} />
+                                        </InlineField>
+                                        <InlineField label="Enregistrement">
+                                           <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
+                                           <DocCellInline doc={m.execution.doc_enregistrement} label="Impôts" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_enregistrement')} />
+                                        </InlineField>
+
+                                        <div className="col-span-full mt-2 mb-1 border-b border-dashed border-slate-200 pb-1 text-[8px] font-black uppercase text-emerald-600">Suivi Financier & Évènements</div>
+                                        
+                                        <InlineField label="Caution Bancaire">
+                                           <span className={`text-[7px] font-black px-1 rounded ${m.execution.type_retenue_garantie === 'OPTION_B' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'}`}>
+                                              {m.execution.type_retenue_garantie === 'OPTION_B' ? 'OUI' : 'NON (Retenue)'}
+                                           </span>
+                                           {m.execution.type_retenue_garantie === 'OPTION_B' && <DocCellInline doc={m.execution.doc_caution_bancaire} label="Caution" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_caution_bancaire')} />}
+                                        </InlineField>
+
+                                        <InlineField label="Nb Décomptes">
+                                           <span className="text-[8px] font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{m.execution.decomptes.length}</span>
+                                        </InlineField>
+
+                                        <InlineField label="Avenants">
+                                           <span className={`text-[7px] font-black px-1 rounded ${m.execution.has_avenant ? 'bg-orange-50 text-orange-600' : 'bg-slate-50 text-slate-400'}`}>
+                                              {m.execution.has_avenant ? `${m.execution.avenants.length} Avenant(s)` : 'AUCUN'}
+                                           </span>
+                                        </InlineField>
+
+                                        <InlineField label="Résilié ?">
+                                           <span className={`text-[7px] font-black px-1 rounded ${m.execution.is_resilie ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'}`}>
+                                              {m.execution.is_resilie ? 'OUI' : 'NON'}
+                                           </span>
+                                           {m.execution.is_resilie && <DocCellInline doc={m.execution.doc_decision_resiliation} label="Décision" readOnly={readOnly} onUpload={() => handleExecutionDocUpload(m.id, 'doc_decision_resiliation')} />}
+                                        </InlineField>
+                                     </div>
+                                   )}
+
                                  </div>
                                </div>
                              </td>
