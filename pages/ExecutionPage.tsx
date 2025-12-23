@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+// pages/ExecutionPage.tsx
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Search, Lock, Unlock, AlertTriangle, FileText, Upload, Download, 
-  Plus, Trash2, CheckCircle2, AlertOctagon, X, Save
+  Plus, Trash2, CheckCircle2, AlertOctagon, X, Save, Layers // Ajout de Layers
 } from 'lucide-react';
 import { useMarkets } from '../contexts/MarketContext';
-import { formatFCFA } from '../services/mockData';
+import { formatFCFA, MOCK_PROJETS } from '../services/mockData'; // Import de MOCK_PROJETS
 import { Marche, Decompte, Avenant } from '../types';
 
 // --- Composant Bouton Upload Simple ---
@@ -329,35 +330,86 @@ const ExecutionPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMarket, setSelectedMarket] = useState<Marche | null>(null);
 
+  // --- NOUVEAUX ÉTATS POUR LE FILTRAGE ---
+  const [selectedYear, setSelectedYear] = useState<number>(2024);
+  const [selectedProjetId, setSelectedProjetId] = useState<string>('');
+
+  // Liste des projets disponibles pour l'année sélectionnée
+  const availableProjects = MOCK_PROJETS.filter(p => p.exercice === selectedYear);
+
+  // Reset du projet si l'année change
+  useEffect(() => {
+    setSelectedProjetId('');
+  }, [selectedYear]);
+
   // Filtre : Uniquement les marchés qui ont potentiellement démarré (ou sont en cours)
+  // + Filtres Année et Projet
   const executionCandidates = marches.filter(m => 
     m.statut_global !== 'PLANIFIE' && 
+    m.exercice === selectedYear &&
+    (selectedProjetId ? m.projet_id === selectedProjetId : true) &&
     (m.id.toLowerCase().includes(searchTerm.toLowerCase()) || m.objet.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {/* HEADER AVEC FILTRES */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Exécution des Marchés</h1>
           <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">
             Gestion Financière • Avenants • Contentieux
           </p>
         </div>
-        <div className="relative group">
+
+        <div className="flex flex-col md:flex-row items-center gap-3">
+          
+          {/* SÉLECTEUR ANNÉE */}
+          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm">
+             <span className="text-[9px] font-black text-slate-400 uppercase">Exercice</span>
+             <select 
+                value={selectedYear} 
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer"
+             >
+               <option value={2024}>2024</option>
+               <option value={2025}>2025</option>
+             </select>
+          </div>
+
+          {/* SÉLECTEUR PROJET */}
+          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm min-w-[200px]">
+             <Layers size={14} className="text-slate-400" />
+             <select 
+                value={selectedProjetId} 
+                onChange={(e) => setSelectedProjetId(e.target.value)}
+                className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer w-full truncate"
+             >
+               <option value="">Tous les Projets</option>
+               {availableProjects.map(p => (
+                 <option key={p.id} value={p.id}>{p.libelle}</option>
+               ))}
+             </select>
+          </div>
+
+          <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
+
+          {/* RECHERCHE */}
+          <div className="relative group w-full md:w-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
             <input 
               type="text" 
               placeholder="Rechercher un marché..."
-              className="bg-white border border-slate-200 rounded-2xl py-3 pl-10 pr-4 text-xs font-black text-slate-700 outline-none w-64 focus:ring-4 focus:ring-primary/5 transition-all shadow-sm"
+              className="bg-white border border-slate-200 rounded-2xl py-3 pl-10 pr-4 text-xs font-black text-slate-700 outline-none w-full md:w-64 focus:ring-4 focus:ring-primary/5 transition-all shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {executionCandidates.map(m => (
+        {executionCandidates.length > 0 ? executionCandidates.map(m => (
           <div key={m.id} onClick={() => setSelectedMarket(m)} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 hover:border-primary/30 hover:shadow-xl cursor-pointer group transition-all">
              <div className="flex items-center justify-between mb-4">
                <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black text-slate-500 uppercase">{m.id}</span>
@@ -379,7 +431,11 @@ const ExecutionPage: React.FC = () => {
                </div>
              </div>
           </div>
-        ))}
+        )) : (
+          <div className="col-span-full py-12 text-center text-slate-400 font-black uppercase text-xs">
+            Aucun marché trouvé pour ces critères.
+          </div>
+        )}
       </div>
 
       {selectedMarket && <ExecutionModal market={selectedMarket} onClose={() => setSelectedMarket(null)} />}

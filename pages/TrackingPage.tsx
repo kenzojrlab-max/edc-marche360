@@ -1,5 +1,5 @@
 // pages/TrackingPage.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Search, 
@@ -8,9 +8,10 @@ import {
   Upload, 
   ShieldCheck,
   Download,
-  AlertTriangle 
+  Filter,
+  Layers
 } from 'lucide-react';
-import { CURRENT_USER } from '../services/mockData';
+import { CURRENT_USER, MOCK_PROJETS } from '../services/mockData'; // Ajout de MOCK_PROJETS
 import { JalonPassationKey, SourceFinancement, UserRole } from '../types';
 import { useMarkets } from '../contexts/MarketContext';
 
@@ -107,8 +108,20 @@ const AdminDateInput = ({ value, onChange, disabled }: { value?: string, onChang
 const TrackingPage: React.FC = () => {
   const { marches, updateMarche } = useMarkets();
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // --- NOUVEAUX ETATS POUR LE FILTRAGE ---
+  const [selectedYear, setSelectedYear] = useState<number>(2024);
+  const [selectedProjetId, setSelectedProjetId] = useState<string>('');
 
   const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
+
+  // Calcul des projets disponibles pour l'année sélectionnée
+  const availableProjects = MOCK_PROJETS.filter(p => p.exercice === selectedYear);
+
+  // Mise à jour auto du projet si l'année change
+  useEffect(() => {
+    setSelectedProjetId('');
+  }, [selectedYear]);
 
   const handleUpdateDate = (marketId: string, key: JalonPassationKey, value: string) => {
     if (!isAdmin) return;
@@ -126,7 +139,6 @@ const TrackingPage: React.FC = () => {
     }
   };
 
-  // Gestion Upload (URL locale pour démo)
   const handleDocUpload = (marketId: string, docKey: string, file: File, isSpecialDoc?: boolean) => {
     if (!isAdmin) return;
 
@@ -151,15 +163,25 @@ const TrackingPage: React.FC = () => {
     }
   };
 
-  const filteredMarches = marches.filter(m => 
-    m.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    m.objet.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // --- FILTRAGE AVANCÉ ---
+  const filteredMarches = marches.filter(m => {
+    // 1. Filtre par Année
+    const matchYear = m.exercice === selectedYear;
+    
+    // 2. Filtre par Projet (si sélectionné)
+    const matchProject = selectedProjetId ? m.projet_id === selectedProjetId : true;
+
+    // 3. Filtre Recherche textuelle
+    const matchSearch = m.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        m.objet.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchYear && matchProject && matchSearch;
+  });
 
   return (
     <div className="space-y-6 max-w-[100vw] overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
             <Activity className="text-primary" size={28} />
@@ -170,19 +192,51 @@ const TrackingPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative group">
+        <div className="flex flex-col md:flex-row items-center gap-3">
+          
+          {/* SÉLECTEUR ANNÉE */}
+          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm">
+             <span className="text-[9px] font-black text-slate-400 uppercase">Exercice</span>
+             <select 
+                value={selectedYear} 
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer"
+             >
+               <option value={2024}>2024</option>
+               <option value={2025}>2025</option>
+             </select>
+          </div>
+
+          {/* SÉLECTEUR PROJET */}
+          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm min-w-[200px]">
+             <Layers size={14} className="text-slate-400" />
+             <select 
+                value={selectedProjetId} 
+                onChange={(e) => setSelectedProjetId(e.target.value)}
+                className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer w-full truncate"
+             >
+               <option value="">Tous les Projets</option>
+               {availableProjects.map(p => (
+                 <option key={p.id} value={p.id}>{p.libelle}</option>
+               ))}
+             </select>
+          </div>
+
+          <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
+
+          {/* RECHERCHE */}
+          <div className="relative group w-full md:w-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
             <input 
               type="text" 
               placeholder="Rechercher..."
-              className="bg-white border border-slate-200 rounded-2xl py-3 pl-10 pr-4 text-xs font-black text-slate-700 outline-none w-64 focus:ring-4 focus:ring-primary/5 transition-all shadow-sm"
+              className="bg-white border border-slate-200 rounded-2xl py-3 pl-10 pr-4 text-xs font-black text-slate-700 outline-none w-full md:w-64 focus:ring-4 focus:ring-primary/5 transition-all shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           {isAdmin && (
-            <button className="bg-primary text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center gap-2 transition-transform hover:scale-105">
+            <button className="bg-primary text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center gap-2 transition-transform hover:scale-105 whitespace-nowrap">
               <Save size={16} /> Enregistrer
             </button>
           )}
@@ -251,7 +305,7 @@ const TrackingPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredMarches.map(m => {
+              {filteredMarches.length > 0 ? filteredMarches.map(m => {
                 const isEDC = m.source_financement === SourceFinancement.BUDGET_EDC;
                 return (
                   <tr key={m.id} className="hover:bg-slate-50/80 transition-colors group">
@@ -480,7 +534,16 @@ const TrackingPage: React.FC = () => {
                     <td className="px-3 py-2.5 bg-primary/5 text-primary text-[8px] uppercase">{m.etat_avancement}</td>
                   </tr>
                 );
-              })}
+              }) : (
+                <tr>
+                  <td colSpan={33} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-300">
+                      <Layers size={48} className="mb-4 opacity-50" />
+                      <p className="text-xs font-black uppercase tracking-widest">Aucun marché trouvé pour ces critères</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
