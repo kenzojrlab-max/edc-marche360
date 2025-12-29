@@ -15,6 +15,7 @@ interface MarketContextType {
   addMarche: (newMarche: Marche) => void;
   
   addProjet: (newProjet: Projet) => void;
+  updateProjet: (updatedProjet: Projet) => void; // <--- C'est vital que ceci soit présent
   
   addUser: (newUser: User) => void;
   deleteUser: (userId: string) => void;
@@ -28,7 +29,7 @@ interface MarketContextType {
 const MarketContext = createContext<MarketContextType | undefined>(undefined);
 
 export const MarketProvider = ({ children }: { children: React.ReactNode }) => {
-  // Initialisation avec les données Mock, mais ensuite gérées dynamiquement
+  // Initialisation avec les données Mock
   const [marches, setMarches] = useState<Marche[]>(MOCK_MARCHES);
   const [projets, setProjets] = useState<Projet[]>(MOCK_PROJETS);
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
@@ -48,6 +49,11 @@ export const MarketProvider = ({ children }: { children: React.ReactNode }) => {
   // --- PROJETS ---
   const addProjet = (newProjet: Projet) => {
     setProjets(prev => [...prev, newProjet]);
+  };
+
+  // MISE A JOUR PROJET (Vital pour le PPM Signé)
+  const updateProjet = (updatedProjet: Projet) => {
+    setProjets(prev => prev.map(p => p.id === updatedProjet.id ? updatedProjet : p));
   };
 
   // --- UTILISATEURS ---
@@ -77,6 +83,7 @@ export const MarketProvider = ({ children }: { children: React.ReactNode }) => {
         updateMarche, 
         addMarche, 
         addProjet,
+        updateProjet, // <--- Exporté ici
         addUser,
         deleteUser,
         addFonction,

@@ -343,8 +343,8 @@ interface MarketListProps {
 }
 
 const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
-  // CORRECTION ICI : Récupération des 'projets' et 'fonctions' du contexte global
-  const { marches, updateMarche, addMarche, projets, addProjet, fonctions } = useMarkets();
+  // CORRECTION ICI : Ajout de updateProjet
+  const { marches, updateMarche, addMarche, projets, addProjet, updateProjet, fonctions } = useMarkets();
   
   const [selectedYear, setSelectedYear] = useState(2024);
   const [selectedProjetId, setSelectedProjetId] = useState<string | null>(null);
@@ -412,6 +412,17 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
         } 
     };
     updateMarche(updatedMarket);
+  };
+
+  // --- AJOUT DE LA FONCTION POUR UPLOADER LE PPM (POUR EVITER LES BUGS) ---
+  const handlePpmUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && currentProjet) {
+      const file = e.target.files[0];
+      const url = URL.createObjectURL(file);
+      updateProjet({ ...currentProjet, ppm_pdf_url: url });
+      alert("PPM signé chargé avec succès !");
+      e.target.value = ''; // Réinitialiser pour permettre le ré-upload si besoin
+    }
   };
 
   const handleCreateProject = (e: React.FormEvent) => {
@@ -643,9 +654,68 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                 <div className="p-4 bg-primary/10 text-primary rounded-[1.5rem]"><FileText size={24} /></div>
                 <div>
                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">{readOnly ? 'Plan de Passation' : 'Marchés Inscrits au PPM'} : {currentProjet?.libelle}</h2>
-                   <p className="text-slate-400 text-[10px] font-black uppercase">Source : {currentProjet?.source_financement} {currentProjet?.bailleur_nom ? `(${currentProjet.bailleur_nom})` : ''}</p>
+                   <div className="flex items-center gap-3 mt-1">
+                     <p className="text-slate-400 text-[10px] font-black uppercase">Source : {currentProjet?.source_financement} {currentProjet?.bailleur_nom ? `(${currentProjet.bailleur_nom})` : ''}</p>
+                     
+                     {/* --- MODIFICATION PPM SIGNE --- */}
+                     {currentProjet && (
+                       <>
+                         <div className="h-3 w-px bg-slate-300"></div>
+                         {!readOnly ? (
+                           <div className="relative group">
+                             <input 
+                               type="file" 
+                               id="upload-ppm-signed" 
+                               className="hidden" 
+                               accept=".pdf"
+                               onChange={handlePpmUpload}
+                             />
+                             <label 
+                               htmlFor="upload-ppm-signed" 
+                               className={`flex items-center gap-2 px-3 py-1 rounded-lg border text-[9px] font-black uppercase cursor-pointer transition-all ${
+                                 currentProjet.ppm_pdf_url 
+                                   ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' 
+                                   : 'bg-white text-slate-400 border-dashed border-slate-300 hover:text-primary hover:border-primary'
+                               }`}
+                             >
+                               <Upload size={12} />
+                               {currentProjet.ppm_pdf_url ? 'Remplacer PPM Signé' : 'Uploader PPM Signé'}
+                             </label>
+                           </div>
+                         ) : (
+                           currentProjet.ppm_pdf_url ? (
+                             <a 
+                               href={currentProjet.ppm_pdf_url} 
+                               target="_blank" 
+                               rel="noreferrer"
+                               className="flex items-center gap-2 px-3 py-1 rounded-lg bg-emerald-600 text-white shadow-md shadow-emerald-200 hover:scale-105 transition-transform text-[9px] font-black uppercase"
+                             >
+                               <Download size={12} /> Télécharger PPM Signé
+                             </a>
+                           ) : (
+                             <span className="flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-100 text-slate-400 border border-slate-200 text-[9px] font-black uppercase">
+                               <FileText size={12} /> PPM non disponible
+                             </span>
+                           )
+                         )}
+                         {/* VISUALISATION POUR ADMIN */}
+                         {!readOnly && currentProjet.ppm_pdf_url && (
+                            <a 
+                               href={currentProjet.ppm_pdf_url} 
+                               target="_blank" 
+                               rel="noreferrer"
+                               className="flex items-center gap-2 px-3 py-1 rounded-lg bg-emerald-100 text-emerald-600 border border-emerald-200 hover:bg-emerald-200 transition-all text-[9px] font-black uppercase"
+                            >
+                               <Eye size={12} /> Voir
+                            </a>
+                         )}
+                       </>
+                     )}
+                     {/* --- FIN MODIFICATION --- */}
+                   </div>
                 </div>
              </div>
+             
              {!readOnly && (
                <div className="flex items-center gap-3">
                  <button onClick={() => setIsExcelModalOpen(true)} className="px-8 py-4 bg-slate-800 text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 shadow-xl shadow-slate-900/10 transition-all flex items-center">
