@@ -1,47 +1,86 @@
 // contexts/MarketContext.tsx
 import React, { createContext, useContext, useState } from 'react';
-import { MOCK_MARCHES, MOCK_PROJETS } from '../services/mockData';
-import { Marche, Projet } from '../types';
+import { MOCK_MARCHES, MOCK_PROJETS, MOCK_USERS, CONFIG_FONCTIONS } from '../services/mockData';
+import { Marche, Projet, User, ConfigFonction } from '../types';
 
 interface MarketContextType {
+  // Données
   marches: Marche[];
-  projets: Projet[]; // <--- AJOUT
+  projets: Projet[];
+  users: User[];
+  fonctions: ConfigFonction[];
+
+  // Actions
   updateMarche: (updatedMarche: Marche) => void;
   addMarche: (newMarche: Marche) => void;
-  addProjet: (newProjet: Projet) => void; // <--- AJOUT
+  
+  addProjet: (newProjet: Projet) => void;
+  
+  addUser: (newUser: User) => void;
+  deleteUser: (userId: string) => void;
+
+  addFonction: (libelle: string) => void;
+  deleteFonction: (libelle: string) => void;
+
   getMarcheById: (id: string) => Marche | undefined;
 }
 
 const MarketContext = createContext<MarketContextType | undefined>(undefined);
 
 export const MarketProvider = ({ children }: { children: React.ReactNode }) => {
+  // Initialisation avec les données Mock, mais ensuite gérées dynamiquement
   const [marches, setMarches] = useState<Marche[]>(MOCK_MARCHES);
-  const [projets, setProjets] = useState<Projet[]>(MOCK_PROJETS); // <--- AJOUT ETAT GLOBAL
+  const [projets, setProjets] = useState<Projet[]>(MOCK_PROJETS);
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [fonctions, setFonctions] = useState<ConfigFonction[]>(CONFIG_FONCTIONS);
 
-  // Fonction pour modifier un marché existant
+  // --- MARCHÉS ---
   const updateMarche = (updatedMarche: Marche) => {
     setMarches(prev => prev.map(m => m.id === updatedMarche.id ? updatedMarche : m));
   };
 
-  // Fonction pour ajouter un marché
   const addMarche = (newMarche: Marche) => {
     setMarches(prev => [...prev, newMarche]);
   };
 
-  // Fonction pour ajouter un projet
+  const getMarcheById = (id: string) => marches.find(m => m.id === id);
+
+  // --- PROJETS ---
   const addProjet = (newProjet: Projet) => {
     setProjets(prev => [...prev, newProjet]);
   };
 
-  const getMarcheById = (id: string) => marches.find(m => m.id === id);
+  // --- UTILISATEURS ---
+  const addUser = (newUser: User) => {
+    setUsers(prev => [...prev, newUser]);
+  };
+
+  const deleteUser = (userId: string) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+  };
+
+  // --- FONCTIONS / REFERENTIELS ---
+  const addFonction = (libelle: string) => {
+    setFonctions(prev => [...prev, { libelle }]);
+  };
+
+  const deleteFonction = (libelle: string) => {
+    setFonctions(prev => prev.filter(f => f.libelle !== libelle));
+  };
 
   return (
     <MarketContext.Provider value={{ 
         marches, 
-        projets, // <--- EXPOSITION
+        projets, 
+        users,
+        fonctions,
         updateMarche, 
         addMarche, 
-        addProjet, // <--- EXPOSITION
+        addProjet,
+        addUser,
+        deleteUser,
+        addFonction,
+        deleteFonction,
         getMarcheById 
     }}>
       {children}

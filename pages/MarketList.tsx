@@ -8,7 +8,7 @@ import {
   ChevronDown, Building2, Landmark, ShieldCheck, Check, Layers, ArrowRight, FileCheck, AlertCircle,
   Activity, Save, Upload, Info, Eye, Briefcase, FileSignature, Lock, AlertOctagon, CheckCircle2
 } from 'lucide-react';
-import { formatFCFA, calculateDaysBetween, CONFIG_FONCTIONS } from '../services/mockData';
+import { formatFCFA, calculateDaysBetween } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, StatutGlobal, Marche, Projet } from '../types';
 import { useMarkets } from '../contexts/MarketContext'; 
 
@@ -343,12 +343,9 @@ interface MarketListProps {
 }
 
 const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
-  // --- CORRECTION : Récupération des projets et de la fonction d'ajout depuis le contexte global ---
-  const { marches, updateMarche, addMarche, projets, addProjet } = useMarkets();
+  // CORRECTION ICI : Récupération des 'projets' et 'fonctions' du contexte global
+  const { marches, updateMarche, addMarche, projets, addProjet, fonctions } = useMarkets();
   
-  // --- SUPPRESSION : On ne gère plus les projets localement ---
-  // const [projets, setProjets] = useState<Projet[]>(MOCK_PROJETS);
-
   const [selectedYear, setSelectedYear] = useState(2024);
   const [selectedProjetId, setSelectedProjetId] = useState<string | null>(null);
   const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
@@ -417,7 +414,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     updateMarche(updatedMarket);
   };
 
-  // --- CORRECTION : Utilisation de addProjet du contexte global ---
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();
     const newId = `PROJ_${Date.now()}`;
@@ -427,7 +423,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
       exercice: projectFormData.exercice, date_creation: new Date().toISOString().split('T')[0]
     };
     
-    // Appel au contexte global
     addProjet(newProjet);
     
     setSelectedYear(projectFormData.exercice);
@@ -876,24 +871,32 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                            {m.execution.type_retenue_garantie === 'OPTION_B' && <DocCellInline doc={m.execution.doc_caution_bancaire} label="Caution" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_caution_bancaire', f)} />}
                                         </InlineField>
 
-                                        {/* --- CHAMPS INTERACTIFS POUR MODAL CONSULTATION --- */}
+                                        {/* --- CHAMPS INTERACTIFS AVEC STOP PROPAGATION (CORRIGÉ) --- */}
                                         <InlineField label="Nb Décomptes">
                                            <div 
-                                              onDoubleClick={() => setViewModal({ type: 'DECOMPTES', market: m })} 
-                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded"
+                                              onDoubleClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                setViewModal({ type: 'DECOMPTES', market: m });
+                                              }}
+                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded select-none w-full"
                                               title="Double-cliquez pour voir le détail"
                                             >
-                                             <span className="text-[8px] font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 hover:bg-white hover:border-primary/50">{m.execution.decomptes.length} (Détails)</span>
+                                             <span className="text-[8px] font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 hover:bg-white hover:border-primary/50 block text-center truncate">{m.execution.decomptes.length} (Détails)</span>
                                            </div>
                                         </InlineField>
 
                                         <InlineField label="Avenants">
                                            <div 
-                                              onDoubleClick={() => setViewModal({ type: 'AVENANTS', market: m })}
-                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded"
+                                              onDoubleClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                setViewModal({ type: 'AVENANTS', market: m });
+                                              }}
+                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded select-none w-full"
                                               title="Double-cliquez pour voir les avenants"
                                            >
-                                             <span className={`text-[7px] font-black px-1 rounded border ${m.execution.has_avenant ? 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-white' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
+                                             <span className={`text-[7px] font-black px-1 rounded border block text-center truncate ${m.execution.has_avenant ? 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-white' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
                                                 {m.execution.has_avenant ? `${m.execution.avenants.length} Avenant(s)` : 'AUCUN'}
                                              </span>
                                            </div>
@@ -901,11 +904,15 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
 
                                         <InlineField label="Résilié ?">
                                            <div 
-                                              onDoubleClick={() => setViewModal({ type: 'RESILIATION', market: m })}
-                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded"
+                                              onDoubleClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                setViewModal({ type: 'RESILIATION', market: m });
+                                              }}
+                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded select-none w-full"
                                               title="Double-cliquez pour voir les détails de résiliation"
                                            >
-                                             <span className={`text-[7px] font-black px-1 rounded border ${m.execution.is_resilie ? 'bg-red-50 text-red-600 border-red-200 hover:bg-white' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
+                                             <span className={`text-[7px] font-black px-1 rounded border block text-center truncate ${m.execution.is_resilie ? 'bg-red-50 text-red-600 border-red-200 hover:bg-white' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
                                                 {m.execution.is_resilie ? 'OUI (Voir)' : 'NON'}
                                              </span>
                                            </div>
@@ -1052,7 +1059,7 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                        <BulleInput label="N° Dossier" placeholder="Ex: 001/EDC/2024" value={formData.id} onChange={(e: any) => setFormData({...formData, id: e.target.value})} required />
                        <BulleInput label="Imputation" placeholder="EXP-2024-X01" value={formData.imputation_budgetaire} onChange={(e: any) => setFormData({...formData, imputation_budgetaire: e.target.value})} required />
                        <div className="md:col-span-2"><BulleInput label="Objet Marché" textarea placeholder="Description complète..." value={formData.objet} onChange={(e: any) => setFormData({...formData, objet: e.target.value})} required /></div>
-                       <BulleInput label="Fonction" options={CONFIG_FONCTIONS.map(f => ({ value: f.libelle, label: f.libelle }))} value={formData.fonction_parente} onChange={(e: any) => setFormData({...formData, fonction_parente: e.target.value})} required />
+                       <BulleInput label="Fonction" options={fonctions.map(f => ({ value: f.libelle, label: f.libelle }))} value={formData.fonction_parente} onChange={(e: any) => setFormData({...formData, fonction_parente: e.target.value})} required />
                        <BulleInput label="Activité" placeholder="Texte libre..." value={formData.activite_parente} onChange={(e: any) => setFormData({...formData, activite_parente: e.target.value})} required />
                        <BulleInput label="Type AO" placeholder="AONO, AONI..." value={formData.type_ao} onChange={(e: any) => setFormData({...formData, type_ao: e.target.value})} required />
                        <BulleInput label="Prestation" placeholder="Travaux, Services..." value={formData.type_prestation} onChange={(e: any) => setFormData({...formData, type_prestation: e.target.value})} required />

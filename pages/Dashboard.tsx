@@ -1,37 +1,113 @@
-import React, { useState } from 'react';
+// pages/Dashboard.tsx
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line
 } from 'recharts';
-import { TrendingUp, AlertCircle, CheckCircle, Clock, Filter } from 'lucide-react';
-import { MOCK_MARCHES, formatFCFA, CONFIG_FONCTIONS } from '../services/mockData';
-import { StatutGlobal } from '../types';
+import { TrendingUp, AlertCircle, CheckCircle, Clock, Filter, Layers, Calendar, ArrowRight, DollarSign, Timer } from 'lucide-react';
+import { formatFCFA, calculateDaysBetween } from '../services/mockData';
+import { StatutGlobal, SourceFinancement } from '../types';
+import { useMarkets } from '../contexts/MarketContext'; 
 
 const COLORS = ['#1e3a8a', '#10b981', '#f59e0b', '#ef4444'];
+const BLUE_COLOR = '#1e3a8a';
+const GREEN_COLOR = '#10b981';
 
+// --- HELPERS ---
+const todayISO = new Date().toISOString().split('T')[0];
+
+const mean = (arr: number[]) => {
+  const clean = arr.filter(n => Number.isFinite(n));
+  if (clean.length === 0) return 0;
+  return Math.round(clean.reduce((a, b) => a + b, 0) / clean.length);
+};
+
+// Jalons pour détection blocage
+const JALONS: { key: string; label: string; isAno?: boolean }[] = [
+  { key: 'saisine_cipm', label: 'Saisine CIPM' },
+  { key: 'examen_dao_cipm', label: 'Examen DAO' },
+  { key: 'ano_bailleur_dao', label: 'ANO Bailleur (DAO)', isAno: true },
+  { key: 'lancement_ao', label: 'Lancement AO' },
+  { key: 'depouillement', label: 'Dépouillement' },
+  { key: 'prop_attrib_cipm', label: 'Prop. Attribution' },
+  { key: 'avis_conforme_ca', label: 'Avis Conforme CA' },
+  { key: 'ano_bailleur_attrib', label: 'ANO Bailleur (Attrib)', isAno: true },
+  { key: 'publication', label: 'Publication' },
+  { key: 'souscription_projet', label: 'Souscription' },
+  { key: 'saisine_cipm_projet', label: 'Saisine Projet' },
+  { key: 'examen_projet_cipm', label: 'Examen Projet' },
+  { key: 'ano_bailleur_projet', label: 'ANO Bailleur (Projet)', isAno: true },
+  { key: 'signature_marche', label: 'Signature' },
+  { key: 'notification', label: 'Notification' },
+];
+
+const getBlockingPoint = (m: any) => {
+  for (const j of JALONS) {
+    if (j.isAno && m.source_financement === SourceFinancement.BUDGET_EDC) continue;
+    const real = m?.dates_realisees?.[j.key];
+    if (!real) return j;
+  }
+  return null;
+};
+
+const getDelayDays = (m: any, jalonKey: string) => {
+  const prev = m?.dates_prevues?.[jalonKey];
+  const real = m?.dates_realisees?.[jalonKey];
+  if (!prev) return 0;
+  if (!real) {
+    const d = calculateDaysBetween(prev, todayISO);
+    return d ? Math.max(0, d) : 0;
+  }
+  const d = calculateDaysBetween(prev, real);
+  return d ? Math.max(0, d) : 0;
+};
+
+// --- CORRECTION ICI : StatCard optimisée pour tenir sur une seule ligne ---
 const StatCard = ({ title, value, subtext, icon: Icon, colorClass }: any) => (
-  <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-start justify-between">
-    <div>
-      <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-      <h3 className="text-2xl font-bold text-slate-800">{value}</h3>
-      {subtext && <p className={`text-xs mt-2 ${colorClass}`}>{subtext}</p>}
+  <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-shadow h-full">
+    <div className="flex-1 min-w-0 mr-3"> {/* min-w-0 est crucial pour que truncate fonctionne dans flex */}
+      <p className="text-sm font-medium text-slate-500 mb-1 truncate">{title}</p>
+      {/* Changements appliqués :
+          - whitespace-nowrap : Force tout le texte sur une ligne (pas de retour à la ligne pour FCFA)
+          - text-base sm:text-lg : Police réduite pour faire tenir les gros montants
+          - tracking-tighter : Resserre les caractères
+          - truncate : Ajoute "..." si ça dépasse malgré tout
+      */}
+      <h3 
+        className="text-base sm:text-lg font-black text-slate-800 tracking-tighter whitespace-nowrap truncate leading-tight"
+        title={value} // Affiche le montant entier au survol de la souris
+      >
+        {value}
+      </h3>
+      {subtext && <p className={`text-xs mt-1 ${colorClass} truncate`}>{subtext}</p>}
     </div>
-    <div className={`p-3 rounded-2xl ${colorClass.replace('text-', 'bg-').replace('600', '100')} ${colorClass}`}>
+    <div className={`p-3 rounded-2xl flex-shrink-0 ${colorClass.replace('text-', 'bg-').replace('600', '100')} ${colorClass}`}>
       <Icon size={24} />
     </div>
   </div>
 );
 
 const Dashboard: React.FC = () => {
+  const { marches, projets, fonctions } = useMarkets();
+  
+  const [selectedYear, setSelectedYear] = useState<number>(2024);
+  const [selectedProjetId, setSelectedProjetId] = useState<string>('');
   const [filterFonction, setFilterFonction] = useState<string>('');
-  
-  // Data Filtering
-  let data = MOCK_MARCHES.filter(m => m.exercice === 2024);
-  
-  if (filterFonction) {
-    data = data.filter(m => m.fonction_parente === filterFonction);
-  }
 
-  // KPIs Calculations
+  const availableProjects = projets.filter(p => p.exercice === selectedYear);
+
+  useEffect(() => {
+    setSelectedProjetId('');
+  }, [selectedYear]);
+  
+  let data = marches.filter(m => {
+    const matchYear = m.exercice === selectedYear;
+    const matchProject = selectedProjetId ? m.projet_id === selectedProjetId : true;
+    const matchFonction = filterFonction ? m.fonction_parente === filterFonction : true;
+    return matchYear && matchProject && matchFonction;
+  });
+
+  // --- CALCUL DES KPIS ---
   const totalMarkets = data.length;
   const strictlySigned = data.filter(m => m.statut_global === StatutGlobal.SIGNE || m.statut_global === StatutGlobal.CLOTURE).length;
   
@@ -39,18 +115,45 @@ const Dashboard: React.FC = () => {
   const totalAmountEngage = data.filter(m => m.statut_global === StatutGlobal.SIGNE || m.statut_global === StatutGlobal.CLOTURE).reduce((acc, curr) => acc + (curr.montant_ttc_reel || curr.montant_prevu), 0);
   
   const tauxContractualisation = totalMarkets > 0 ? Math.round((strictlySigned / totalMarkets) * 100) : 0;
+  const resteAEngager = totalAmountPrevu - totalAmountEngage;
+
+  // --- CÉLÉRITÉ ---
+  const delaiPrevuMoy = mean(data.map(m => Number(m.delai_global_passation || 0)).filter(v => v > 0));
+  const delaisReels = data
+    .filter(m => m.statut_global === StatutGlobal.SIGNE || m.statut_global === StatutGlobal.CLOTURE)
+    .map(m => calculateDaysBetween(m?.dates_realisees?.saisine_cipm, m?.dates_realisees?.signature_marche))
+    .filter((v): v is number => typeof v === 'number' && v > 0);
+  const delaiReelMoy = mean(delaisReels);
+  const celeriteValue = delaiPrevuMoy && delaiReelMoy ? Math.round((delaiPrevuMoy / delaiReelMoy) * 100) : null;
   
-  const celerite = "92%"; // Mock value
-  
-  // --- NOUVEAU CALCUL CONTENTIEUX BASÉ SUR "has_recours" ---
   const totalRecours = data.filter(m => m.has_recours).length;
   const tauxContentieux = totalMarkets > 0 ? ((totalRecours / totalMarkets) * 100).toFixed(1) : "0";
 
-  // Chart Data
+  // --- ALERTES ---
+  const alerts = data
+    .filter(m => m.statut_global === StatutGlobal.EN_COURS || m.statut_global === StatutGlobal.PLANIFIE)
+    .map(m => {
+      const blocking = getBlockingPoint(m);
+      if (!blocking) return null;
+      const delayDays = getDelayDays(m, blocking.key);
+      return {
+        id: m.id,
+        objet: m.objet,
+        blockingLabel: blocking.label,
+        delayDays,
+        impactText: delayDays > 0 ? `+ ${delayDays} j` : "À jour",
+        impactClass: delayDays > 0 ? "text-red-600 bg-red-50" : "text-emerald-600 bg-emerald-50",
+      };
+    })
+    .filter(Boolean)
+    .sort((a: any, b: any) => b.delayDays - a.delayDays)
+    .slice(0, 5);
+
+  // --- DATA VISUALISATION ---
   const statusData = [
     { name: 'Planifié', value: data.filter(m => m.statut_global === StatutGlobal.PLANIFIE).length },
     { name: 'En Procédure', value: data.filter(m => m.statut_global === StatutGlobal.EN_COURS).length },
-    { name: 'Signé/Exécution', value: data.filter(m => m.statut_global === StatutGlobal.SIGNE).length },
+    { name: 'Signé', value: strictlySigned },
     { name: 'Clôturé', value: data.filter(m => m.statut_global === StatutGlobal.CLOTURE).length },
   ];
 
@@ -63,37 +166,67 @@ const Dashboard: React.FC = () => {
     amount: functionDataMap[key]
   }));
 
+  // NOUVEAU : Data pour "Prévu vs Engagé"
+  const budgetComparisonData = [
+    { name: 'Budget Prévu', montant: totalAmountPrevu },
+    { name: 'Montant Engagé', montant: totalAmountEngage }
+  ];
+
+  // NOUVEAU : Data pour "Délais Moyens"
+  const delayComparisonData = [
+    { name: 'Délai Moyen', prevu: delaiPrevuMoy, reel: delaiReelMoy }
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+    <div className="space-y-8">
+      {/* HEADER */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Pilotage de la Performance</h1>
-          <p className="text-slate-500 font-medium">Exercice 2024 - Indicateurs Clés</p>
+          <p className="text-slate-500 font-medium text-xs uppercase tracking-widest mt-1">
+             Exercice {selectedYear} • {selectedProjetId ? availableProjects.find(p => p.id === selectedProjetId)?.libelle : "Tous les Projets"}
+          </p>
         </div>
         
-        {/* Rounded Filters Area */}
-        <div className="mt-4 md:mt-0 flex items-center space-x-3 max-w-full overflow-x-auto pb-1 md:pb-0">
-          <div className="flex items-center space-x-2 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm min-w-[250px] md:min-w-0 transition-all focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/5">
-            <Filter size={16} className="text-slate-400 flex-shrink-0" />
-            <select 
-              className="text-xs border-none focus:ring-0 text-slate-700 font-black bg-transparent outline-none truncate w-full cursor-pointer appearance-none"
-              value={filterFonction}
-              onChange={(e) => setFilterFonction(e.target.value)}
-            >
+        <div className="flex flex-col md:flex-row items-center gap-3 overflow-x-auto pb-1">
+          <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm whitespace-nowrap">
+             <Calendar size={14} className="text-slate-400" />
+             <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer">
+               <option value={2024}>2024</option>
+               <option value={2025}>2025</option>
+             </select>
+          </div>
+
+          <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm min-w-[200px] max-w-xs">
+             <Layers size={14} className="text-slate-400 flex-shrink-0" />
+             <select value={selectedProjetId} onChange={(e) => setSelectedProjetId(e.target.value)} className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer w-full truncate">
+               <option value="">Tous les Projets</option>
+               {availableProjects.map(p => (
+                 <option key={p.id} value={p.id}>{p.libelle}</option>
+               ))}
+             </select>
+          </div>
+
+          <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
+
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm min-w-[200px]">
+            <Filter size={14} className="text-slate-400 flex-shrink-0" />
+            <select value={filterFonction} onChange={(e) => setFilterFonction(e.target.value)} className="text-xs border-none focus:ring-0 text-slate-700 font-black bg-transparent outline-none truncate w-full cursor-pointer appearance-none">
               <option value="">Toutes les Fonctions</option>
-              {CONFIG_FONCTIONS.map(f => (
+              {fonctions.map(f => (
                 <option key={f.libelle} value={f.libelle}>{f.libelle}</option>
               ))}
             </select>
           </div>
-          <button className="bg-primary text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 shadow-xl shadow-blue-200 transition-all whitespace-nowrap">
-            Export Rapport PDF
+
+          <button className="bg-primary text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 shadow-xl shadow-blue-200 transition-all whitespace-nowrap ml-auto md:ml-0">
+            Export Rapport
           </button>
         </div>
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-bottom-4 duration-500">
         <StatCard 
           title="Taux de Contractualisation" 
           value={`${tauxContractualisation}%`} 
@@ -102,18 +235,18 @@ const Dashboard: React.FC = () => {
           colorClass="text-blue-600" 
         />
         <StatCard 
-          title="Montant Engagé" 
-          value={formatFCFA(totalAmountEngage)} 
-          subtext={`Sur ${formatFCFA(totalAmountPrevu)} prévus`} 
+          title="Reste à Engager" 
+          value={formatFCFA(resteAEngager)} 
+          subtext={`${formatFCFA(totalAmountEngage)} déjà engagés`} 
           icon={CheckCircle} 
           colorClass="text-emerald-600" 
         />
         <StatCard 
           title="Indice de Célérité" 
-          value={celerite} 
+          value={celeriteValue ? `${celeriteValue}%` : "N/A"} 
           subtext="Ratio Prévu / Réalisé" 
           icon={Clock} 
-          colorClass={parseInt(celerite) < 90 ? "text-amber-600" : "text-green-600"} 
+          colorClass={!celeriteValue ? "text-slate-400" : (celeriteValue < 90 ? "text-amber-600" : "text-green-600")} 
         />
         <StatCard 
           title="Taux de Contentieux" 
@@ -124,22 +257,16 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* Charts Row */}
+      {/* Charts Row 1: Status & Budget Comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* 1. STATUS (Pie) */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 lg:col-span-1">
           <h3 className="text-sm font-black text-slate-800 mb-6 uppercase tracking-widest">État d'avancement (Volume)</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
+                <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                   {statusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
@@ -151,20 +278,63 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 lg:col-span-2">
-          <h3 className="text-sm font-black text-slate-800 mb-6 uppercase tracking-widest">Programmation par Fonction (FCFA)</h3>
+        {/* 2. BUDGET PREVU VS ENGAGE (Bar) - NOUVEAU */}
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 lg:col-span-1">
+          <h3 className="text-sm font-black text-slate-800 mb-6 uppercase tracking-widest flex items-center gap-2">
+            <DollarSign size={16} /> Performance Financière
+          </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={functionData}>
+              <BarChart data={budgetComparisonData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 700}} />
-                <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `${val / 1000000}M`} tick={{fontSize: 10, fontWeight: 700}} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
+                <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `${(val/1000000).toFixed(0)}M`} tick={{fontSize: 10, fontWeight: 700}} />
                 <Tooltip formatter={(value) => formatFCFA(value as number)} />
-                <Bar dataKey="amount" fill="#1e3a8a" radius={[12, 12, 0, 0]} barSize={40} />
+                <Bar dataKey="montant" fill={BLUE_COLOR} radius={[10, 10, 0, 0]} barSize={50}>
+                   {budgetComparisonData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index === 0 ? '#94a3b8' : '#10b981'} />
+                   ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
+
+        {/* 3. DELAIS PREVU VS REEL (Bar Grouped) - NOUVEAU */}
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 lg:col-span-1">
+          <h3 className="text-sm font-black text-slate-800 mb-6 uppercase tracking-widest flex items-center gap-2">
+            <Timer size={16} /> Performance Délais (Jours)
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={delayComparisonData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 0}} /> {/* Hide X label as legend is enough */}
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36}/>
+                <Bar name="Délai Prévu Moy." dataKey="prevu" fill="#94a3b8" radius={[10, 10, 0, 0]} barSize={40} />
+                <Bar name="Délai Réel Moy." dataKey="reel" fill="#f59e0b" radius={[10, 10, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2 : Breakdown by Function */}
+      <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+          <h3 className="text-sm font-black text-slate-800 mb-6 uppercase tracking-widest">Répartition budgétaire par Fonction</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={functionData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
+                <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `${(val/1000000).toFixed(0)}M`} tick={{fontSize: 10, fontWeight: 700}} />
+                <Tooltip formatter={(value) => formatFCFA(value as number)} />
+                <Bar dataKey="amount" fill={BLUE_COLOR} radius={[6, 6, 0, 0]} barSize={60} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
       </div>
 
       {/* Alert Table */}
@@ -183,19 +353,32 @@ const Dashboard: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {data.filter(m => m.statut_global === StatutGlobal.EN_COURS).slice(0, 3).map((m) => (
-              <tr key={m.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 font-black text-slate-900">#{m.id.toUpperCase()}</td>
-                <td className="px-6 py-4 truncate max-w-xs font-medium">{m.objet}</td>
-                <td className="px-6 py-4 text-slate-500 font-bold">Attente ANO Bailleur</td>
-                <td className="px-6 py-4 text-red-600 font-black italic">+ 5 jours</td>
-                <td className="px-6 py-4">
-                  <button className="bg-slate-100 text-primary px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-wide hover:bg-primary hover:text-white transition-all">
-                    Résoudre
-                  </button>
+            {alerts && alerts.length > 0 ? (
+               alerts.map((a: any) => (
+                <tr key={a.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 font-black text-slate-900">#{a.id}</td>
+                  <td className="px-6 py-4 truncate max-w-xs font-medium">{a.objet}</td>
+                  <td className="px-6 py-4 text-slate-500 font-bold">{a.blockingLabel}</td>
+                  <td className="px-6 py-4 font-black italic">
+                    <span className={`px-2 py-1 rounded-lg text-[9px] ${a.impactClass}`}>{a.impactText}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Link to={`/markets/${a.id}`} className="bg-slate-100 text-primary px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-wide hover:bg-primary hover:text-white transition-all flex items-center w-fit gap-1">
+                      Voir <ArrowRight size={10} />
+                    </Link>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium italic">
+                   <div className="flex flex-col items-center justify-center gap-2">
+                      <CheckCircle size={32} className="text-emerald-200" />
+                      <span>Aucune alerte critique. Tout est à jour !</span>
+                   </div>
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

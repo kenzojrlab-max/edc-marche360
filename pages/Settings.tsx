@@ -1,26 +1,34 @@
-
+// pages/Settings.tsx
 import React, { useState } from 'react';
 import { 
   Users, Settings as SettingsIcon, Shield, Layers, Plus, Trash2, Edit2, Save
 } from 'lucide-react';
-import { MOCK_USERS, CONFIG_FONCTIONS } from '../services/mockData';
 import { User, UserRole } from '../types';
+import { useMarkets } from '../contexts/MarketContext'; // <--- Import Context
 
 const Settings: React.FC = () => {
+  const { users, fonctions, addUser, deleteUser, addFonction, deleteFonction } = useMarkets(); // <--- Hooks
   const [activeTab, setActiveTab] = useState<'USERS' | 'CONFIG'>('USERS');
-  const [users, setUsers] = useState(MOCK_USERS);
-  const [fonctions, setFonctions] = useState(CONFIG_FONCTIONS);
+  
   const [newFonction, setNewFonction] = useState('');
+
+  // Pour démo ajout user simplifié
+  const handleAddUserMock = () => {
+      const u: User = {
+          id: `u${Date.now()}`,
+          nom_complet: "Nouvel Utilisateur",
+          email: "user@edc.cm",
+          role: UserRole.USER,
+          projets_autorises: []
+      }
+      addUser(u);
+  }
 
   const handleAddFonction = () => {
     if (newFonction.trim()) {
-      setFonctions([...fonctions, { libelle: newFonction.toUpperCase() }]);
+      addFonction(newFonction.toUpperCase());
       setNewFonction('');
     }
-  };
-
-  const handleDeleteFonction = (libelle: string) => {
-    setFonctions(fonctions.filter(f => f.libelle !== libelle));
   };
 
   return (
@@ -69,7 +77,7 @@ const Settings: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
              <h3 className="text-lg font-bold text-slate-800">Liste des Utilisateurs</h3>
-             <button className="flex items-center px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-800 shadow-sm transition-colors">
+             <button onClick={handleAddUserMock} className="flex items-center px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-800 shadow-sm transition-colors">
                 <Plus size={16} className="mr-2" />
                 Nouvel Utilisateur
              </button>
@@ -104,7 +112,7 @@ const Settings: React.FC = () => {
                        <button className="text-slate-400 hover:text-blue-600 mr-3">
                          <Edit2 size={16} />
                        </button>
-                       <button className="text-slate-400 hover:text-red-600">
+                       <button onClick={() => deleteUser(u.id)} className="text-slate-400 hover:text-red-600">
                          <Trash2 size={16} />
                        </button>
                     </td>
@@ -136,7 +144,7 @@ const Settings: React.FC = () => {
                 <li key={f.libelle} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
                   <span className="font-medium text-slate-700 text-xs">{f.libelle}</span>
                   <button 
-                    onClick={() => handleDeleteFonction(f.libelle)}
+                    onClick={() => deleteFonction(f.libelle)}
                     className="text-slate-400 hover:text-red-500 transition-colors ml-4 flex-shrink-0"
                   >
                     <Trash2 size={16} />
@@ -159,28 +167,6 @@ const Settings: React.FC = () => {
               >
                 <Plus size={16} />
               </button>
-            </div>
-          </div>
-
-          {/* Projets Management (Mock) */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 opacity-60">
-             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-slate-800 flex items-center">
-                <Shield size={20} className="mr-2 text-slate-400" />
-                Projets & Exercices
-              </h3>
-              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">Bientôt disponible</span>
-            </div>
-            <p className="text-xs text-slate-500 mb-4">
-              Gestion des codes projets (PROJET_MEMVE, etc.) et ouverture/clôture des exercices budgétaires.
-            </p>
-            <div className="space-y-3">
-               <div className="p-3 bg-slate-50 rounded border border-slate-200 text-sm font-medium text-slate-600">
-                 PROJET_MEMVE (Memve'ele)
-               </div>
-               <div className="p-3 bg-slate-50 rounded border border-slate-200 text-sm font-medium text-slate-600">
-                 PROJET_LOM_PANGAR (Lom Pangar)
-               </div>
             </div>
           </div>
         </div>
