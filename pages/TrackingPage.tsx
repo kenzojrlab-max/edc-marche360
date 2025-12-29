@@ -6,12 +6,14 @@ import {
   Activity, 
   Save, 
   Upload, 
-  ShieldCheck,
+  ShieldCheck, 
   Download,
   Filter,
-  Layers
+  Layers,
+  AlertTriangle
 } from 'lucide-react';
-import { CURRENT_USER, MOCK_PROJETS } from '../services/mockData'; // Ajout de MOCK_PROJETS
+// CORRECTION : On retire MOCK_PROJETS des imports car on va utiliser le contexte
+import { CURRENT_USER } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, UserRole } from '../types';
 import { useMarkets } from '../contexts/MarketContext';
 
@@ -106,7 +108,8 @@ const AdminDateInput = ({ value, onChange, disabled }: { value?: string, onChang
 );
 
 const TrackingPage: React.FC = () => {
-  const { marches, updateMarche } = useMarkets();
+  // CORRECTION ICI : On récupère 'projets' du contexte global
+  const { marches, updateMarche, projets } = useMarkets();
   const [searchTerm, setSearchTerm] = useState('');
   
   // --- NOUVEAUX ETATS POUR LE FILTRAGE ---
@@ -115,8 +118,8 @@ const TrackingPage: React.FC = () => {
 
   const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
 
-  // Calcul des projets disponibles pour l'année sélectionnée
-  const availableProjects = MOCK_PROJETS.filter(p => p.exercice === selectedYear);
+  // CORRECTION ICI : On filtre sur la liste dynamique 'projets' et non MOCK_PROJETS
+  const availableProjects = projets.filter(p => p.exercice === selectedYear);
 
   // Mise à jour auto du projet si l'année change
   useEffect(() => {
@@ -163,19 +166,26 @@ const TrackingPage: React.FC = () => {
     }
   };
 
-  // --- FILTRAGE AVANCÉ ---
+  // --- FILTRAGE AVANCÉ ET SÉCURISÉ ---
   const filteredMarches = marches.filter(m => {
-    // 1. Filtre par Année
-    const matchYear = m.exercice === selectedYear;
-    
-    // 2. Filtre par Projet (si sélectionné)
-    const matchProject = selectedProjetId ? m.projet_id === selectedProjetId : true;
+    try {
+      // 1. Filtre par Année
+      const matchYear = Number(m.exercice) === selectedYear;
+      
+      // 2. Filtre par Projet
+      const matchProject = selectedProjetId ? m.projet_id === selectedProjetId : true;
 
-    // 3. Filtre Recherche textuelle
-    const matchSearch = m.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        m.objet.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchYear && matchProject && matchSearch;
+      // 3. Filtre Recherche textuelle
+      const safeId = String(m.id || '').toLowerCase();
+      const safeObjet = String(m.objet || '').toLowerCase();
+      const safeSearch = searchTerm.toLowerCase();
+
+      const matchSearch = safeId.includes(safeSearch) || safeObjet.includes(safeSearch);
+      
+      return matchYear && matchProject && matchSearch;
+    } catch (e) {
+      return false; 
+    }
   });
 
   return (

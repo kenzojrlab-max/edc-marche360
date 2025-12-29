@@ -5,7 +5,8 @@ import {
   Plus, Trash2, CheckCircle2, AlertOctagon, X, Save, Layers, Flag
 } from 'lucide-react';
 import { useMarkets } from '../contexts/MarketContext';
-import { formatFCFA, MOCK_PROJETS } from '../services/mockData';
+// CORRECTION : On retire MOCK_PROJETS des imports
+import { formatFCFA } from '../services/mockData';
 import { Marche, Decompte, Avenant } from '../types';
 
 // --- Composant Bouton Upload Simple ---
@@ -16,7 +17,7 @@ const UploadBtn = ({ label, hasDoc, url, onUpload, color = "blue" }: any) => {
   return (
     <div className="flex flex-col gap-1">
       {label && <span className="text-[9px] font-black uppercase text-slate-400">{label}</span>}
-      <input type="file" className="hidden"HV ref={ref} onChange={(e) => e.target.files && onUpload(e.target.files[0])} />
+      <input type="file" className="hidden" ref={ref} onChange={(e) => e.target.files && onUpload(e.target.files[0])} />
       {hasDoc ? (
         <a href={url} target="_blank" rel="noreferrer" className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-${colorClass}-200 bg-${colorClass}-50 text-${colorClass}-700 text-[10px] font-black uppercase hover:bg-${colorClass}-100 transition-all`}>
           <Download size={14} /> VOIR DOC
@@ -401,15 +402,19 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
 
 // --- PAGE PRINCIPALE : LISTE DES MARCHÉS POUR EXÉCUTION ---
 const ExecutionPage: React.FC = () => {
-  const { marches } = useMarkets();
+  // CORRECTION ICI : Récupération des 'projets' du contexte global
+  const { marches, projets } = useMarkets();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMarket, setSelectedMarket] = useState<Marche | null>(null);
 
+  // --- NOUVEAUX ÉTATS POUR LE FILTRAGE ---
   const [selectedYear, setSelectedYear] = useState<number>(2024);
   const [selectedProjetId, setSelectedProjetId] = useState<string>('');
 
-  const availableProjects = MOCK_PROJETS.filter(p => p.exercice === selectedYear);
+  // CORRECTION ICI : Liste dynamique des projets disponibles pour l'année sélectionnée
+  const availableProjects = projets.filter(p => p.exercice === selectedYear);
 
+  // Reset du projet si l'année change
   useEffect(() => {
     setSelectedProjetId('');
   }, [selectedYear]);
@@ -436,6 +441,7 @@ const ExecutionPage: React.FC = () => {
 
         <div className="flex flex-col md:flex-row items-center gap-3">
           
+          {/* SÉLECTEUR ANNÉE */}
           <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm">
              <span className="text-[9px] font-black text-slate-400 uppercase">Exercice</span>
              <select 
@@ -448,6 +454,7 @@ const ExecutionPage: React.FC = () => {
              </select>
           </div>
 
+          {/* SÉLECTEUR PROJET */}
           <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm min-w-[200px]">
              <Layers size={14} className="text-slate-400" />
              <select 
@@ -464,6 +471,7 @@ const ExecutionPage: React.FC = () => {
 
           <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
 
+          {/* RECHERCHE */}
           <div className="relative group w-full md:w-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
             <input 

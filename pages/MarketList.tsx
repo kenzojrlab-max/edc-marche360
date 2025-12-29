@@ -8,7 +8,7 @@ import {
   ChevronDown, Building2, Landmark, ShieldCheck, Check, Layers, ArrowRight, FileCheck, AlertCircle,
   Activity, Save, Upload, Info, Eye, Briefcase, FileSignature, Lock, AlertOctagon, CheckCircle2
 } from 'lucide-react';
-import { MOCK_PROJETS, formatFCFA, calculateDaysBetween, CONFIG_FONCTIONS } from '../services/mockData';
+import { formatFCFA, calculateDaysBetween, CONFIG_FONCTIONS } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, StatutGlobal, Marche, Projet } from '../types';
 import { useMarkets } from '../contexts/MarketContext'; 
 
@@ -343,9 +343,12 @@ interface MarketListProps {
 }
 
 const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
-  const { marches, updateMarche, addMarche } = useMarkets();
+  // --- CORRECTION : Récupération des projets et de la fonction d'ajout depuis le contexte global ---
+  const { marches, updateMarche, addMarche, projets, addProjet } = useMarkets();
   
-  const [projets, setProjets] = useState<Projet[]>(MOCK_PROJETS);
+  // --- SUPPRESSION : On ne gère plus les projets localement ---
+  // const [projets, setProjets] = useState<Projet[]>(MOCK_PROJETS);
+
   const [selectedYear, setSelectedYear] = useState(2024);
   const [selectedProjetId, setSelectedProjetId] = useState<string | null>(null);
   const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
@@ -414,6 +417,7 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     updateMarche(updatedMarket);
   };
 
+  // --- CORRECTION : Utilisation de addProjet du contexte global ---
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();
     const newId = `PROJ_${Date.now()}`;
@@ -422,7 +426,10 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
       bailleur_nom: projectFormData.source_financement === SourceFinancement.BAILLEUR ? projectFormData.bailleur_nom : undefined,
       exercice: projectFormData.exercice, date_creation: new Date().toISOString().split('T')[0]
     };
-    setProjets([...projets, newProjet]);
+    
+    // Appel au contexte global
+    addProjet(newProjet);
+    
     setSelectedYear(projectFormData.exercice);
     setSelectedProjetId(newId);
     setIsProjectModalOpen(false);
@@ -453,13 +460,111 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
   };
 
   const handleExcelImport = () => {
-    if (!excelFile) return;
+    if (!excelFile || !selectedProjetId) {
+        if(!selectedProjetId) alert("Veuillez sélectionner un projet avant d'importer.");
+        return;
+    }
+    
     setIsImporting(true);
-    setTimeout(() => {
-      setIsImporting(false);
-      setIsExcelModalOpen(false);
-      setExcelFile(null);
-    }, 1500);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0]; 
+        const sheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+        let importedCount = 0;
+
+        jsonData.forEach((row: any) => {
+            const newMarket: Marche = {
+                id: String(row["N° Dossier"] || `M-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`),
+                objet: String(row["Objet Marché"] || "Objet non spécifié"),
+                fonction_parente: String(row["Fonction"] || "Non définie"),
+                activite_parente: String(row["Activité"] || ""),
+                type_ao: String(row["Type AO"] || "AONO"),
+                type_prestation: String(row["Prestation"] || "Services"),
+                imputation_budgetaire: String(row["Imputation"] || "N/A"),
+                montant_prevu: parseInt(row["Budget FCFA"]) || 0,
+                delai_global_passation: parseInt(row["Délai Global (jours)"]) || 0,
+                
+                projet_id: selectedProjetId,
+                exercice: selectedYear,
+                source_financement: currentProjet?.source_financement || SourceFinancement.BUDGET_EDC,
+                bailleur_nom: currentProjet?.bailleur_nom,
+                
+                statut_global: StatutGlobal.PLANIFIE,
+                hors_ppm: false,
+                docs: {},
+                is_infructueux: false,
+                is_annule: false,
+                recours: 'Néant',
+                has_recours: false,
+                etat_avancement: 'Inscrit au PPM',
+                
+                dates_prevues: {
+                    saisine_cipm: row["Saisine CIPM"],
+                    examen_dao_cipm: row["Examen DAO"],
+                    ano_bailleur_dao: row["ANO Bailleur (DAO)"],
+                    lancement_ao: row["Lancement AO"],
+                    depouillement: row["Dépouillement"],
+                    prop_attrib_cipm: row["Prop. Attribution"],
+                    avis_conforme_ca: row["Avis CA"],
+                    ano_bailleur_attrib: row["ANO Bailleur (Attrib)"],
+                    publication: row["Publication"],
+                    souscription_projet: row["Souscription"],
+                    saisine_cipm_projet: row["Saisine Projet"],
+                    examen_projet_cipm: row["Examen Projet"],
+                    ano_bailleur_projet: row["ANO Bailleur (Projet)"],
+                    signature_marche: row["Signature"],
+                    notification: row["Notification"],
+                    saisine_cipm_prev: undefined,
+                    validation_dao: undefined,
+                    additif: undefined,
+                    validation_eval_offres: undefined,
+                    ano_bailleur_eval: undefined,
+                    ouverture_financiere: undefined,
+                    notification_attrib: undefined,
+                    validation_projet: undefined,
+                },
+                
+                dates_realisees: {
+                    saisine_cipm_prev: undefined, saisine_cipm: undefined, examen_dao_cipm: undefined, validation_dao: undefined,
+                    ano_bailleur_dao: undefined, lancement_ao: undefined, additif: undefined, depouillement: undefined,
+                    validation_eval_offres: undefined, ano_bailleur_eval: undefined, ouverture_financiere: undefined,
+                    prop_attrib_cipm: undefined, avis_conforme_ca: undefined, ano_bailleur_attrib: undefined, publication: undefined,
+                    notification_attrib: undefined, souscription_projet: undefined, saisine_cipm_projet: undefined,
+                    examen_projet_cipm: undefined, validation_projet: undefined, ano_bailleur_projet: undefined,
+                    signature_marche: undefined, notification: undefined
+                },
+
+                execution: { 
+                    decomptes: [], 
+                    avenants: [], 
+                    type_retenue_garantie: 'OPTION_A', 
+                    has_avenant: false, 
+                    is_resilie: false 
+                }
+            };
+            
+            addMarche(newMarket);
+            importedCount++;
+        });
+
+        alert(`${importedCount} ligne(s) importée(s) avec succès dans le projet ${currentProjet?.libelle} !`);
+      } catch (error) {
+        console.error("Erreur import Excel:", error);
+        alert("Erreur lors de la lecture du fichier Excel. Vérifiez le format.");
+      } finally {
+        setIsImporting(false);
+        setIsExcelModalOpen(false);
+        setExcelFile(null);
+      }
+    };
+    
+    reader.readAsBinaryString(excelFile);
   };
 
   const projetsDeAnnee = projets.filter(p => p.exercice === selectedYear);
@@ -771,32 +876,24 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                            {m.execution.type_retenue_garantie === 'OPTION_B' && <DocCellInline doc={m.execution.doc_caution_bancaire} label="Caution" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_caution_bancaire', f)} />}
                                         </InlineField>
 
-                                        {/* --- CHAMPS INTERACTIFS AVEC STOP PROPAGATION (CORRIGÉ) --- */}
+                                        {/* --- CHAMPS INTERACTIFS POUR MODAL CONSULTATION --- */}
                                         <InlineField label="Nb Décomptes">
                                            <div 
-                                              onDoubleClick={(e) => {
-                                                e.stopPropagation();
-                                                e.preventDefault();
-                                                setViewModal({ type: 'DECOMPTES', market: m });
-                                              }}
-                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded select-none w-full"
+                                              onDoubleClick={() => setViewModal({ type: 'DECOMPTES', market: m })} 
+                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded"
                                               title="Double-cliquez pour voir le détail"
                                             >
-                                             <span className="text-[8px] font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 hover:bg-white hover:border-primary/50 block text-center truncate">{m.execution.decomptes.length} (Détails)</span>
+                                             <span className="text-[8px] font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 hover:bg-white hover:border-primary/50">{m.execution.decomptes.length} (Détails)</span>
                                            </div>
                                         </InlineField>
 
                                         <InlineField label="Avenants">
                                            <div 
-                                              onDoubleClick={(e) => {
-                                                e.stopPropagation();
-                                                e.preventDefault();
-                                                setViewModal({ type: 'AVENANTS', market: m });
-                                              }}
-                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded select-none w-full"
+                                              onDoubleClick={() => setViewModal({ type: 'AVENANTS', market: m })}
+                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded"
                                               title="Double-cliquez pour voir les avenants"
                                            >
-                                             <span className={`text-[7px] font-black px-1 rounded border block text-center truncate ${m.execution.has_avenant ? 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-white' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
+                                             <span className={`text-[7px] font-black px-1 rounded border ${m.execution.has_avenant ? 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-white' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
                                                 {m.execution.has_avenant ? `${m.execution.avenants.length} Avenant(s)` : 'AUCUN'}
                                              </span>
                                            </div>
@@ -804,15 +901,11 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
 
                                         <InlineField label="Résilié ?">
                                            <div 
-                                              onDoubleClick={(e) => {
-                                                e.stopPropagation();
-                                                e.preventDefault();
-                                                setViewModal({ type: 'RESILIATION', market: m });
-                                              }}
-                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded select-none w-full"
+                                              onDoubleClick={() => setViewModal({ type: 'RESILIATION', market: m })}
+                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded"
                                               title="Double-cliquez pour voir les détails de résiliation"
                                            >
-                                             <span className={`text-[7px] font-black px-1 rounded border block text-center truncate ${m.execution.is_resilie ? 'bg-red-50 text-red-600 border-red-200 hover:bg-white' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
+                                             <span className={`text-[7px] font-black px-1 rounded border ${m.execution.is_resilie ? 'bg-red-50 text-red-600 border-red-200 hover:bg-white' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
                                                 {m.execution.is_resilie ? 'OUI (Voir)' : 'NON'}
                                              </span>
                                            </div>
