@@ -15,11 +15,11 @@ const UploadBtn = ({ label, hasDoc, url, onUpload, color = "blue" }: any) => {
   
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[9px] font-black uppercase text-slate-400">{label}</span>
-      <input type="file" className="hidden" ref={ref} onChange={(e) => e.target.files && onUpload(e.target.files[0])} />
+      {label && <span className="text-[9px] font-black uppercase text-slate-400">{label}</span>}
+      <input type="file" className="hidden"HV ref={ref} onChange={(e) => e.target.files && onUpload(e.target.files[0])} />
       {hasDoc ? (
         <a href={url} target="_blank" rel="noreferrer" className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-${colorClass}-200 bg-${colorClass}-50 text-${colorClass}-700 text-[10px] font-black uppercase hover:bg-${colorClass}-100 transition-all`}>
-          <Download size={14} /> Voir Doc
+          <Download size={14} /> VOIR DOC
         </a>
       ) : (
         <button onClick={() => ref.current?.click()} className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-400 text-[10px] font-black uppercase hover:border-primary hover:text-primary transition-all">
@@ -37,6 +37,7 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
   const [activeTab, setActiveTab] = useState<'CONTRACTUEL' | 'FINANCIER'>('CONTRACTUEL');
 
   // --- LOGIQUE CONDITION STRICTE ---
+  // Pour l'accès, on vérifie si une date de signature existe OU si un document signé est présent
   const hasSignatureDate = !!localMarket.dates_realisees.signature_marche;
   const hasSignedContract = !!localMarket.docs.marche_signe;
   
@@ -48,21 +49,23 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
     setLocalMarket(prev => ({ ...prev, execution: { ...prev.execution, [field]: value } }));
   };
 
-  // Mise à jour doc exécution
+  // Mise à jour doc exécution (Champs simples)
   const handleUpload = (field: string, file: File) => {
     const url = URL.createObjectURL(file);
     updateExec(field, { nom: file.name, url, date_upload: new Date().toISOString().split('T')[0] });
   };
 
-  // Gestion Décomptes
+  // --- GESTION DECOMPTES ---
   const addDecompte = () => {
     const newDecompte: Decompte = { id: Date.now().toString(), numero: '', objet: '', montant: 0, date_validation: '' };
     updateExec('decomptes', [...localMarket.execution.decomptes, newDecompte]);
   };
+  
   const updateDecompte = (id: string, field: string, value: any) => {
     const updated = localMarket.execution.decomptes.map(d => d.id === id ? { ...d, [field]: value } : d);
     updateExec('decomptes', updated);
   };
+  
   const uploadDecompteDoc = (id: string, file: File) => {
     const url = URL.createObjectURL(file);
     const doc = { nom: file.name, url, date_upload: new Date().toISOString().split('T')[0] };
@@ -70,13 +73,27 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
     updateExec('decomptes', updated);
   };
 
-  // Gestion Avenants
+  // --- GESTION AVENANTS (CORRIGÉ) ---
   const addAvenant = () => {
     const newAv: Avenant = { id: Date.now().toString(), ref: '', objet: '', montant_inc_dec: 0, date_signature: '' };
     updateExec('avenants', [...localMarket.execution.avenants, newAv]);
   };
+  
   const updateAvenant = (id: string, field: string, value: any) => {
     const updated = localMarket.execution.avenants.map(a => a.id === id ? { ...a, [field]: value } : a);
+    updateExec('avenants', updated);
+  };
+
+  // NOUVELLE FONCTION AJOUTÉE POUR LES DOCS AVENANTS
+  const uploadAvenantDoc = (id: string, docField: string, file: File) => {
+    const url = URL.createObjectURL(file);
+    const doc = { nom: file.name, url, date_upload: new Date().toISOString().split('T')[0] };
+    
+    // On parcourt la liste des avenants pour trouver celui qui correspond à l'ID
+    const updated = localMarket.execution.avenants.map(a => 
+      a.id === id ? { ...a, [docField]: doc } : a
+    );
+    
     updateExec('avenants', updated);
   };
 
@@ -95,7 +112,7 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
           <h2 className="text-xl font-black text-slate-800 mb-2 uppercase">Accès Refusé</h2>
           <p className="text-sm text-slate-500 mb-6 leading-relaxed">
             L'onglet exécution est verrouillé. <br/>
-            Veuillez remplir au moins une condition :
+            Veuillez remplir au moins une condition dans le <strong>Suivi des Marchés</strong> :
           </p>
           <div className="space-y-3 text-left bg-slate-50 p-4 rounded-xl mb-6">
             <div className={`flex items-center gap-3 text-xs font-bold ${hasSignatureDate ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -192,7 +209,6 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
                       <UploadBtn label="Cautionnement Définitif" hasDoc={!!localMarket.execution.doc_caution_def} url={localMarket.execution.doc_caution_def?.url} onUpload={(f:File) => handleUpload('doc_caution_def', f)} />
                       <UploadBtn label="Police d'Assurance" hasDoc={!!localMarket.execution.doc_assurance} url={localMarket.execution.doc_assurance?.url} onUpload={(f:File) => handleUpload('doc_assurance', f)} />
                       <UploadBtn label="Enregistrement (Impôts)" hasDoc={!!localMarket.execution.doc_enregistrement} url={localMarket.execution.doc_enregistrement?.url} onUpload={(f:File) => handleUpload('doc_enregistrement', f)} />
-                      {/* NOUVEAU : Contrat Enregistré */}
                       <UploadBtn label="Contrat Enregistré" hasDoc={!!localMarket.execution.doc_contrat_enregistre} url={localMarket.execution.doc_contrat_enregistre?.url} onUpload={(f:File) => handleUpload('doc_contrat_enregistre', f)} />
                     </div>
                   </div>
@@ -201,7 +217,6 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
                   <div className="space-y-3">
                      <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Layers size={14} /> Suivi d'Exécution</h3>
                      <div className="grid grid-cols-2 gap-3">
-                        {/* NOUVEAU : Rapport d'exécution */}
                         <UploadBtn label="Rapport d'Exécution" hasDoc={!!localMarket.execution.doc_rapport_execution} url={localMarket.execution.doc_rapport_execution?.url} onUpload={(f:File) => handleUpload('doc_rapport_execution', f)} />
                      </div>
                   </div>
@@ -302,9 +317,32 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
                             <td className="p-2"><input type="text" className="w-20 bg-slate-100 rounded px-1" value={a.ref} onChange={e => updateAvenant(a.id, 'ref', e.target.value)} /></td>
                             <td className="p-2"><input type="text" className="w-full bg-slate-100 rounded px-1" value={a.objet} onChange={e => updateAvenant(a.id, 'objet', e.target.value)} /></td>
                             <td className="p-2"><input type="number" className="w-24 bg-slate-100 rounded px-1 font-mono" value={a.montant_inc_dec} onChange={e => updateAvenant(a.id, 'montant_inc_dec', parseInt(e.target.value))} /></td>
-                            <td className="p-2"><UploadBtn label="Notif" hasDoc={!!a.doc_notification} url={a.doc_notification?.url} onUpload={(f:File) => { /* Logic simplified for array item */ }} /></td>
-                            <td className="p-2"><UploadBtn label="OS" hasDoc={!!a.doc_os} url={a.doc_os?.url} onUpload={(f:File) => {}} /></td>
-                            <td className="p-2"><UploadBtn label="Enreg." hasDoc={!!a.doc_enregistrement} url={a.doc_enregistrement?.url} onUpload={(f:File) => {}} /></td>
+                            
+                            {/* ICI : UTILISATION DE LA NOUVELLE FONCTION POUR UPLOAD */}
+                            <td className="p-2">
+                                <UploadBtn 
+                                  label="Notif" 
+                                  hasDoc={!!a.doc_notification} 
+                                  url={a.doc_notification?.url} 
+                                  onUpload={(f:File) => uploadAvenantDoc(a.id, 'doc_notification', f)} 
+                                />
+                            </td>
+                            <td className="p-2">
+                                <UploadBtn 
+                                  label="OS" 
+                                  hasDoc={!!a.doc_os} 
+                                  url={a.doc_os?.url} 
+                                  onUpload={(f:File) => uploadAvenantDoc(a.id, 'doc_os', f)} 
+                                />
+                            </td>
+                            <td className="p-2">
+                                <UploadBtn 
+                                  label="Enreg." 
+                                  hasDoc={!!a.doc_enregistrement} 
+                                  url={a.doc_enregistrement?.url} 
+                                  onUpload={(f:File) => uploadAvenantDoc(a.id, 'doc_enregistrement', f)} 
+                                />
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -367,22 +405,19 @@ const ExecutionPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMarket, setSelectedMarket] = useState<Marche | null>(null);
 
-  // --- NOUVEAUX ÉTATS POUR LE FILTRAGE ---
   const [selectedYear, setSelectedYear] = useState<number>(2024);
   const [selectedProjetId, setSelectedProjetId] = useState<string>('');
 
-  // Liste des projets disponibles pour l'année sélectionnée
   const availableProjects = MOCK_PROJETS.filter(p => p.exercice === selectedYear);
 
-  // Reset du projet si l'année change
   useEffect(() => {
     setSelectedProjetId('');
   }, [selectedYear]);
 
-  // Filtre : Uniquement les marchés qui ont potentiellement démarré (ou sont en cours)
-  // + Filtres Année et Projet
+  // Filtre
   const executionCandidates = marches.filter(m => 
-    m.statut_global !== 'PLANIFIE' && 
+    !m.is_annule && 
+    !m.is_infructueux &&
     m.exercice === selectedYear &&
     (selectedProjetId ? m.projet_id === selectedProjetId : true) &&
     (m.id.toLowerCase().includes(searchTerm.toLowerCase()) || m.objet.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -401,7 +436,6 @@ const ExecutionPage: React.FC = () => {
 
         <div className="flex flex-col md:flex-row items-center gap-3">
           
-          {/* SÉLECTEUR ANNÉE */}
           <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm">
              <span className="text-[9px] font-black text-slate-400 uppercase">Exercice</span>
              <select 
@@ -414,7 +448,6 @@ const ExecutionPage: React.FC = () => {
              </select>
           </div>
 
-          {/* SÉLECTEUR PROJET */}
           <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm min-w-[200px]">
              <Layers size={14} className="text-slate-400" />
              <select 
@@ -431,7 +464,6 @@ const ExecutionPage: React.FC = () => {
 
           <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
 
-          {/* RECHERCHE */}
           <div className="relative group w-full md:w-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
             <input 
@@ -450,10 +482,10 @@ const ExecutionPage: React.FC = () => {
           <div key={m.id} onClick={() => setSelectedMarket(m)} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 hover:border-primary/30 hover:shadow-xl cursor-pointer group transition-all">
              <div className="flex items-center justify-between mb-4">
                <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black text-slate-500 uppercase">{m.id}</span>
-               {m.dates_realisees.signature_marche && m.docs.marche_signe ? (
+               {m.dates_realisees.signature_marche || m.docs.marche_signe ? (
                  <CheckCircle2 size={18} className="text-emerald-500" />
                ) : (
-                 <AlertTriangle size={18} className="text-amber-400" />
+                 <Lock size={18} className="text-slate-300" />
                )}
              </div>
              <h3 className="text-sm font-black text-slate-800 uppercase leading-snug mb-2 line-clamp-2 group-hover:text-primary transition-colors">{m.objet}</h3>

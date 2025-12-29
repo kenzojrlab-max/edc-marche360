@@ -6,13 +6,189 @@ import {
   Search, Download, Filter, Clock, Calendar, 
   Plus, FileSpreadsheet, X, FileText, FileUp, 
   ChevronDown, Building2, Landmark, ShieldCheck, Check, Layers, ArrowRight, FileCheck, AlertCircle,
-  Activity, Save, Upload, Info, Eye, Briefcase, FileSignature, Lock 
+  Activity, Save, Upload, Info, Eye, Briefcase, FileSignature, Lock, AlertOctagon, CheckCircle2
 } from 'lucide-react';
 import { MOCK_PROJETS, formatFCFA, calculateDaysBetween, CONFIG_FONCTIONS } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, StatutGlobal, Marche, Projet } from '../types';
 import { useMarkets } from '../contexts/MarketContext'; 
 
-// --- COMPOSANT CELLULE DOCUMENT INTELLIGENT (CORRIGÉ) ---
+// --- COMPOSANT MODAL DE CONSULTATION (VUE UTILISATEUR) ---
+const ExecutionViewModal = ({ 
+  type, 
+  market, 
+  onClose 
+}: { 
+  type: 'DECOMPTES' | 'AVENANTS' | 'RESILIATION', 
+  market: Marche, 
+  onClose: () => void 
+}) => {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+           <div className="flex items-center gap-3">
+             <div className={`p-2 rounded-lg ${type === 'RESILIATION' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                {type === 'RESILIATION' ? <AlertOctagon size={20} /> : <Layers size={20} />}
+             </div>
+             <div>
+               <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Détails {type}</h3>
+               <p className="text-[10px] text-slate-500 font-bold">Marché : {market.id}</p>
+             </div>
+           </div>
+           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} className="text-slate-500" /></button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto custom-scrollbar">
+           
+           {/* --- VUE DECOMPTES --- */}
+           {type === 'DECOMPTES' && (
+             <div className="space-y-4">
+                {market.execution.decomptes.length === 0 ? (
+                  <div className="text-center py-10 text-slate-400 italic text-xs font-bold bg-slate-50 rounded-xl border border-dashed border-slate-200">Aucun décompte enregistré.</div>
+                ) : (
+                  <div className="border border-slate-100 rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-[10px]">
+                      <thead className="bg-slate-50 text-slate-500 font-black uppercase">
+                        <tr>
+                          <th className="px-4 py-3 border-b border-slate-100">N°</th>
+                          <th className="px-4 py-3 border-b border-slate-100">Objet</th>
+                          <th className="px-4 py-3 border-b border-slate-100 text-right">Montant</th>
+                          <th className="px-4 py-3 border-b border-slate-100 text-center">Pièce</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {market.execution.decomptes.map((d, i) => (
+                          <tr key={i} className="hover:bg-blue-50/30 transition-colors">
+                            <td className="px-4 py-3 font-bold text-slate-700">{d.numero}</td>
+                            <td className="px-4 py-3 font-medium text-slate-600">{d.objet}</td>
+                            <td className="px-4 py-3 text-right font-mono text-emerald-600 font-black">{formatFCFA(d.montant)}</td>
+                            <td className="px-4 py-3 text-center">
+                              {d.doc ? (
+                                <a href={d.doc.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-600 rounded-lg border border-blue-100 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm">
+                                  <Download size={12} /> <span className="font-black uppercase text-[8px]">Télécharger</span>
+                                </a>
+                              ) : <span className="text-slate-300 italic text-[9px]">Aucun</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+             </div>
+           )}
+
+           {/* --- VUE AVENANTS --- */}
+           {type === 'AVENANTS' && (
+             <div className="space-y-4">
+                {!market.execution.has_avenant || market.execution.avenants.length === 0 ? (
+                  <div className="text-center py-10 text-slate-400 italic text-xs font-bold bg-slate-50 rounded-xl border border-dashed border-slate-200">Aucun avenant enregistré.</div>
+                ) : (
+                  <div className="border border-slate-100 rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-[10px]">
+                      <thead className="bg-slate-50 text-slate-500 font-black uppercase">
+                        <tr>
+                          <th className="px-4 py-3 border-b border-slate-100">Réf</th>
+                          <th className="px-4 py-3 border-b border-slate-100">Objet</th>
+                          <th className="px-4 py-3 border-b border-slate-100 text-right">Incidence (+/-)</th>
+                          <th className="px-4 py-3 border-b border-slate-100 text-center">Notification</th>
+                          <th className="px-4 py-3 border-b border-slate-100 text-center">OS</th>
+                          <th className="px-4 py-3 border-b border-slate-100 text-center">Enreg.</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {market.execution.avenants.map((a, i) => (
+                          <tr key={i} className="hover:bg-orange-50/30 transition-colors">
+                            <td className="px-4 py-3 font-bold text-slate-700">{a.ref}</td>
+                            <td className="px-4 py-3 font-medium text-slate-600">{a.objet}</td>
+                            <td className="px-4 py-3 text-right font-mono text-slate-700 font-black">{formatFCFA(a.montant_inc_dec)}</td>
+                            <td className="px-4 py-3 text-center">
+                              {a.doc_notification ? (
+                                <a href={a.doc_notification.url} target="_blank" rel="noreferrer" className="inline-flex justify-center items-center w-8 h-8 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors" title="Télécharger"><Download size={14} /></a>
+                              ) : <span className="text-slate-300">-</span>}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {a.doc_os ? (
+                                <a href={a.doc_os.url} target="_blank" rel="noreferrer" className="inline-flex justify-center items-center w-8 h-8 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors" title="Télécharger"><Download size={14} /></a>
+                              ) : <span className="text-slate-300">-</span>}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {a.doc_enregistrement ? (
+                                <a href={a.doc_enregistrement.url} target="_blank" rel="noreferrer" className="inline-flex justify-center items-center w-8 h-8 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors" title="Télécharger"><Download size={14} /></a>
+                              ) : <span className="text-slate-300">-</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+             </div>
+           )}
+
+           {/* --- VUE RESILIATION --- */}
+           {type === 'RESILIATION' && (
+             <div className="space-y-6">
+               {!market.execution.is_resilie ? (
+                 <div className="text-center py-12 bg-emerald-50 rounded-[1.5rem] border border-emerald-100">
+                    <CheckCircle2 size={48} className="text-emerald-500 mx-auto mb-4" />
+                    <p className="text-emerald-800 font-black text-sm uppercase tracking-widest">Aucune procédure de résiliation en cours</p>
+                    <p className="text-emerald-600/60 text-[10px] font-bold mt-1">Le marché s'exécute normalement</p>
+                 </div>
+               ) : (
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Etape 1 */}
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col items-center text-center group hover:border-red-200 hover:shadow-lg hover:shadow-red-50 transition-all">
+                       <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-black text-xs mb-4">1</div>
+                       <h4 className="text-xs font-black uppercase text-slate-700 mb-4 tracking-wide">Mise en Demeure</h4>
+                       {market.execution.doc_mise_en_demeure ? (
+                         <a href={market.execution.doc_mise_en_demeure.url} target="_blank" rel="noreferrer" className="w-full py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all flex items-center justify-center gap-2 shadow-sm">
+                           <Download size={14} /> Télécharger
+                         </a>
+                       ) : <span className="text-[10px] text-slate-400 italic font-medium bg-slate-100 px-3 py-1 rounded-full">Non disponible</span>}
+                    </div>
+
+                    {/* Etape 2 */}
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col items-center text-center group hover:border-red-200 hover:shadow-lg hover:shadow-red-50 transition-all">
+                       <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-black text-xs mb-4">2</div>
+                       <h4 className="text-xs font-black uppercase text-slate-700 mb-4 tracking-wide">Constat Carence</h4>
+                       {market.execution.doc_constat_carence ? (
+                         <a href={market.execution.doc_constat_carence.url} target="_blank" rel="noreferrer" className="w-full py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all flex items-center justify-center gap-2 shadow-sm">
+                           <Download size={14} /> Télécharger
+                         </a>
+                       ) : <span className="text-[10px] text-slate-400 italic font-medium bg-slate-100 px-3 py-1 rounded-full">Non disponible</span>}
+                    </div>
+
+                    {/* Etape 3 */}
+                    <div className="bg-red-50 p-6 rounded-2xl border border-red-100 flex flex-col items-center text-center shadow-inner">
+                       <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center font-black text-xs mb-4 shadow-lg shadow-red-200">3</div>
+                       <h4 className="text-xs font-black uppercase text-red-800 mb-4 tracking-wide">Décision Résiliation</h4>
+                       {market.execution.doc_decision_resiliation ? (
+                         <a href={market.execution.doc_decision_resiliation.url} target="_blank" rel="noreferrer" className="w-full py-3 bg-white border border-red-200 rounded-xl text-[10px] font-black text-red-600 hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-sm">
+                           <Download size={14} /> Télécharger
+                         </a>
+                       ) : <span className="text-[10px] text-red-300 italic font-medium">Non disponible</span>}
+                    </div>
+                 </div>
+               )}
+             </div>
+           )}
+        </div>
+        
+        {/* Footer */}
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 text-center">
+           <button onClick={onClose} className="px-8 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors">
+             Fermer
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- COMPOSANT CELLULE DOCUMENT INTELLIGENT ---
 const DocCellInline = ({ 
   doc, 
   label, 
@@ -42,7 +218,6 @@ const DocCellInline = ({
     }
   };
 
-  // 1. CAS DESACTIVE
   if (disabled) {
     return (
       <div className="flex items-center ml-auto flex-shrink-0 opacity-20 pointer-events-none" title="Non applicable">
@@ -53,7 +228,6 @@ const DocCellInline = ({
 
   return (
     <div className="flex items-center ml-auto flex-shrink-0 gap-1 pl-1">
-      {/* BOUTON TÉLÉCHARGEMENT (Visible si doc existe, pour Admin ET User) */}
       {doc && (
         <a 
           href={doc.url} 
@@ -67,14 +241,12 @@ const DocCellInline = ({
         </a>
       )}
 
-      {/* ICÔNE FANTÔME (Visible seulement si lecture seule et pas de doc) */}
       {readOnly && !doc && (
         <div className="p-1 rounded border border-slate-300 flex items-center justify-center opacity-30" title="Aucun document disponible">
            <Download size={10} />
         </div>
       )}
 
-      {/* BOUTON TÉLÉVERSEMENT (Visible seulement si Admin) */}
       {!readOnly && (
         <>
           <input 
@@ -90,7 +262,7 @@ const DocCellInline = ({
             title={doc ? `Remplacer ${label}` : `Téléverser ${label}`}
             className={`p-1 rounded border transition-all flex items-center justify-center group/btn ${
               doc 
-                ? 'bg-white text-slate-400 border-slate-200 hover:text-blue-600 hover:border-blue-300' // Style discret si doc existe déjà
+                ? 'bg-white text-slate-400 border-slate-200 hover:text-blue-600 hover:border-blue-300' 
                 : 'bg-slate-50 text-slate-400 border-dashed border-slate-300 hover:text-primary hover:border-primary hover:bg-blue-50'
             }`}
           >
@@ -178,8 +350,8 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
   const [selectedProjetId, setSelectedProjetId] = useState<string | null>(null);
   const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
   
-  // NOUVEAU : Gestion des onglets dans la vue détaillée
   const [activeTab, setActiveTab] = useState<'PASSATION' | 'EXECUTION'>('PASSATION');
+  const [viewModal, setViewModal] = useState<{ type: 'DECOMPTES' | 'AVENANTS' | 'RESILIATION', market: Marche } | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -197,14 +369,13 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     dates_prevues: {} as any, statut_global: StatutGlobal.PLANIFIE, hors_ppm: false, exercice: 2024
   });
 
-  // Reset tab when expanded row changes
   useEffect(() => {
     setActiveTab('PASSATION');
   }, [expandedMarketId]);
 
   const handleDocUpload = (marketId: string, docKey: string, file?: File, isSpecialDoc?: boolean) => {
     const targetMarket = marches.find(m => m.id === marketId);
-    if (!targetMarket || !file) return; // Modification pour accepter le fichier réel
+    if (!targetMarket || !file) return;
 
     const fakeUrl = URL.createObjectURL(file);
     const mockPiece = { 
@@ -233,7 +404,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
         date_upload: new Date().toISOString().split('T')[0] 
     };
 
-    // Update nested execution object
     const updatedMarket = { 
         ...targetMarket, 
         execution: { 
@@ -587,7 +757,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                            <DocCellInline doc={m.execution.doc_enregistrement} label="Impôts" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_enregistrement', f)} />
                                         </InlineField>
 
-                                        {/* NOUVEAUX CHAMPS AJOUTÉS POUR TÉLÉCHARGEMENT */}
                                         <InlineField label="Contrat Enregistré">
                                            <span className="text-slate-300 italic text-[7px] font-black uppercase">Voir Doc</span>
                                            <DocCellInline doc={m.execution.doc_contrat_enregistre} label="Contrat" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_contrat_enregistre', f)} />
@@ -602,24 +771,54 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                            {m.execution.type_retenue_garantie === 'OPTION_B' && <DocCellInline doc={m.execution.doc_caution_bancaire} label="Caution" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_caution_bancaire', f)} />}
                                         </InlineField>
 
+                                        {/* --- CHAMPS INTERACTIFS AVEC STOP PROPAGATION (CORRIGÉ) --- */}
                                         <InlineField label="Nb Décomptes">
-                                           <span className="text-[8px] font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{m.execution.decomptes.length}</span>
+                                           <div 
+                                              onDoubleClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                setViewModal({ type: 'DECOMPTES', market: m });
+                                              }}
+                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded select-none w-full"
+                                              title="Double-cliquez pour voir le détail"
+                                            >
+                                             <span className="text-[8px] font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 hover:bg-white hover:border-primary/50 block text-center truncate">{m.execution.decomptes.length} (Détails)</span>
+                                           </div>
                                         </InlineField>
 
                                         <InlineField label="Avenants">
-                                           <span className={`text-[7px] font-black px-1 rounded ${m.execution.has_avenant ? 'bg-orange-50 text-orange-600' : 'bg-slate-50 text-slate-400'}`}>
-                                              {m.execution.has_avenant ? `${m.execution.avenants.length} Avenant(s)` : 'AUCUN'}
-                                           </span>
+                                           <div 
+                                              onDoubleClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                setViewModal({ type: 'AVENANTS', market: m });
+                                              }}
+                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded select-none w-full"
+                                              title="Double-cliquez pour voir les avenants"
+                                           >
+                                             <span className={`text-[7px] font-black px-1 rounded border block text-center truncate ${m.execution.has_avenant ? 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-white' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
+                                                {m.execution.has_avenant ? `${m.execution.avenants.length} Avenant(s)` : 'AUCUN'}
+                                             </span>
+                                           </div>
                                         </InlineField>
 
                                         <InlineField label="Résilié ?">
-                                           <span className={`text-[7px] font-black px-1 rounded ${m.execution.is_resilie ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'}`}>
-                                              {m.execution.is_resilie ? 'OUI' : 'NON'}
-                                           </span>
+                                           <div 
+                                              onDoubleClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                setViewModal({ type: 'RESILIATION', market: m });
+                                              }}
+                                              className="cursor-pointer hover:scale-105 hover:shadow-md transition-all rounded select-none w-full"
+                                              title="Double-cliquez pour voir les détails de résiliation"
+                                           >
+                                             <span className={`text-[7px] font-black px-1 rounded border block text-center truncate ${m.execution.is_resilie ? 'bg-red-50 text-red-600 border-red-200 hover:bg-white' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
+                                                {m.execution.is_resilie ? 'OUI (Voir)' : 'NON'}
+                                             </span>
+                                           </div>
                                            {m.execution.is_resilie && <DocCellInline doc={m.execution.doc_decision_resiliation} label="Décision" readOnly={readOnly} onUpload={(f) => handleExecutionDocUpload(m.id, 'doc_decision_resiliation', f)} />}
                                         </InlineField>
 
-                                        {/* NOUVELLE SECTION CLÔTURE & SUIVI POUR TÉLÉCHARGEMENT */}
                                         <div className="col-span-full mt-2 mb-1 border-b border-dashed border-slate-200 pb-1 text-[8px] font-black uppercase text-blue-600">Suivi & Clôture</div>
 
                                         <InlineField label="Rapport Exécution">
@@ -659,6 +858,15 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
              </div>
           </div>
         </div>
+      )}
+
+      {/* RENDER MODAL CONSULTATION */}
+      {viewModal && (
+         <ExecutionViewModal 
+            type={viewModal.type} 
+            market={viewModal.market} 
+            onClose={() => setViewModal(null)} 
+         />
       )}
 
       {/* MODAL IMPORT EXCEL (Visible en Admin uniquement) */}
