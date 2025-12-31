@@ -250,7 +250,8 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
                           <div 
                             key={idx} 
                             onClick={() => {
-                              navigate('/ppm-manage'); // Ou vers le détail du marché
+                              // --- CORRECTION ICI : Redirection vers la fiche Détail ---
+                              navigate(`/markets/${alert.market.id}`); 
                               setShowNotifications(false);
                             }}
                             className="p-4 hover:bg-slate-50 cursor-pointer group transition-colors"
