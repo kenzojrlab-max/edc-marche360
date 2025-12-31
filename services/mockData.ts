@@ -27,11 +27,11 @@ export const MOCK_USERS: User[] = [
   }
 ];
 
+// --- MISE A JOUR : ALIGNEMENT AVEC FIREBASE ---
 export const CONFIG_FONCTIONS: ConfigFonction[] = [
-  { libelle: 'Direction Générale' },
-  { libelle: 'Direction Technique' },
-  { libelle: 'Direction Financière' },
-  { libelle: 'Division des Marchés' }
+  { libelle: 'Développement des projets' }, // Vu dans votre capture
+  { libelle: 'Exploitation' },             // Vu dans votre capture (ID: EXPLOITATION)
+  { libelle: 'Support' }                   // Vu dans votre capture (ID: SUPPORT)
 ];
 
 // --- AJOUT MANQUANT : DOCUMENTS DE LA BIBLIOTHEQUE ---
@@ -101,7 +101,7 @@ export const MOCK_MARCHES: Marche[] = [
   {
     id: '001/AONO/EDC/2024',
     objet: 'Fourniture de matériel informatique pour la Direction Générale',
-    fonction_parente: 'Direction Générale',
+    fonction_parente: 'Support', // Mis à jour pour correspondre à la nouvelle liste
     activite_parente: 'Renforcement des capacités',
     type_ao: 'AONO',
     type_prestation: 'Fournitures',
@@ -179,7 +179,7 @@ export const MOCK_MARCHES: Marche[] = [
   {
     id: '002/AONI/EDC/2024',
     objet: 'Travaux de réhabilitation de la route d\'accès au barrage',
-    fonction_parente: 'Direction Technique',
+    fonction_parente: 'Développement des projets', // Mis à jour (ex: Direction Technique)
     activite_parente: 'Maintenance Infrastructures',
     type_ao: 'AONI',
     type_prestation: 'Travaux',

@@ -23,7 +23,7 @@ import Dashboard from './pages/Dashboard';
 import MarketList from './pages/MarketList';
 import MarketDetail from './pages/MarketDetail';
 import TrackingPage from './pages/TrackingPage';
-import ExecutionPage from './pages/ExecutionPage'; // Assurez-vous que l'extension est .tsx
+import ExecutionPage from './pages/ExecutionPage';
 import DocumentLibrary from './pages/DocumentLibrary';
 import SettingsPage from './pages/Settings';
 import LoginPage from './pages/LoginPage';
@@ -54,24 +54,6 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedYear, setSelectedYear] = useState('2024');
 
-  // Si on est sur la page de Login ou Inscription, on affiche le contenu SANS sidebar
-  const isPublicPage = location.pathname === '/login' || location.pathname === '/register';
-  
-  if (isPublicPage) {
-      return <div className="bg-slate-50 min-h-screen w-full">{children}</div>;
-  }
-
-  // --- CORRECTION CRITIQUE : Suppression du bloc qui retournait null ---
-  // On laisse le rendu se poursuivre même si !currentUser.
-  // C'est ProtectedRoute qui gèrera la redirection.
-  
-  // Si pas connecté, on ne rend que les enfants (qui déclencheront la redirection), sans le layout inutile
-  if (!currentUser) {
-      return <>{children}</>;
-  }
-
-  const isAdmin = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUPER_ADMIN;
-
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 1024) setSidebarOpen(false);
@@ -81,6 +63,34 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
     handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const isPublicPage = location.pathname === '/login' || location.pathname === '/register';
+  
+  if (isPublicPage) {
+      return <div className="bg-slate-50 min-h-screen w-full">{children}</div>;
+  }
+  
+  if (!currentUser) {
+      return <>{children}</>;
+  }
+
+  // --- GESTION DES DROITS ---
+  const role = currentUser.role;
+  
+  const isGuest = role === UserRole.GUEST;
+  const isAdmin = role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN;
+  const isManager = role === UserRole.PROJECT_MANAGER;
+  // Note: isUser est implicite si ce n'est aucun des autres, mais on peut le définir pour la clarté
+  
+  // Règles d'affichage
+  // 1. Documentation : Visible pour Utilisateur, Gestionnaire, Admin (Pas Invité)
+  const showDocumentation = !isGuest; 
+
+  // 2. Gestion Opérationnelle (PPM Manage, Suivi, Exécution, Doc Manage) : Gestionnaire ou Admin
+  const showOperationalManagement = isManager || isAdmin;
+
+  // 3. Administration Système (Paramètres) : Admin uniquement
+  const showSystemSettings = isAdmin;
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
@@ -108,32 +118,47 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               </div>
               <div className="overflow-hidden">
                 <p className="text-sm font-medium text-slate-700 truncate">{currentUser.nom_complet}</p>
-                <p className="text-xs text-slate-500 truncate">{currentUser.role}</p>
+                <p className="text-xs text-slate-500 truncate flex items-center gap-1">
+                  {isGuest && <ShieldCheck size={10} className="text-amber-500" />}
+                  {role}
+                </p>
               </div>
             </div>
           </div>
 
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            {/* --- MENUS COMMUNS (Tous rôles) --- */}
             <SidebarItem to="/" icon={LayoutDashboard} label="Tableau de Bord" active={location.pathname === '/'} />
             <SidebarItem to="/ppm-view" icon={ClipboardList} label="Plan de Passation" active={location.pathname === '/ppm-view'} />
-            <SidebarItem to="/documents" icon={BookOpen} label="Documentation" active={location.pathname === '/documents'} />
             
-            <div className="pt-6 pb-2">
-              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Administration</p>
-            </div>
+            {/* --- DOCUMENTATION (Pas pour Invité) --- */}
+            {showDocumentation && (
+              <SidebarItem to="/documents" icon={BookOpen} label="Documentation" active={location.pathname === '/documents'} />
+            )}
             
-            {isAdmin && (
-              <SidebarItem to="/ppm-manage" icon={ShieldCheck} label="Gestion PPM" active={location.pathname === '/ppm-manage'} />
+            {/* --- GESTION OPERATIONNELLE (Gestionnaire & Admin) --- */}
+            {showOperationalManagement && (
+              <>
+                <div className="pt-6 pb-2">
+                  <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Gestion</p>
+                </div>
+                
+                <SidebarItem to="/ppm-manage" icon={ShieldCheck} label="Gestion PPM" active={location.pathname === '/ppm-manage'} />
+                <SidebarItem to="/tracking" icon={Activity} label="Suivi des marchés" active={location.pathname === '/tracking'} />
+                <SidebarItem to="/execution" icon={Layers} label="Exécution des marchés" active={location.pathname === '/execution'} />
+                <SidebarItem to="/documents-manage" icon={FileText} label="Gestion Documentaire" active={location.pathname === '/documents-manage'} />
+              </>
             )}
 
-            <SidebarItem to="/tracking" icon={Activity} label="Suivi des marchés" active={location.pathname === '/tracking'} />
-            <SidebarItem to="/execution" icon={Layers} label="Exécution des marchés" active={location.pathname === '/execution'} />
-            
-            {isAdmin && (
-              <SidebarItem to="/documents-manage" icon={FileText} label="Gestion Documentaire" active={location.pathname === '/documents-manage'} />
+            {/* --- PARAMETRES SYSTEME (Admin uniquement) --- */}
+            {showSystemSettings && (
+              <>
+                <div className="pt-6 pb-2">
+                  <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Administration</p>
+                </div>
+                <SidebarItem to="/settings" icon={Settings} label="Paramètres" active={location.pathname === '/settings'} />
+              </>
             )}
-            
-            <SidebarItem to="/settings" icon={Settings} label="Paramètres" active={location.pathname === '/settings'} />
           </nav>
 
           <div className="p-4 border-t border-slate-100">
@@ -204,6 +229,8 @@ function App() {
         {/* Routes Protégées */}
         <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/ppm-view" element={<ProtectedRoute><MarketList mode="PPM" readOnly={true} /></ProtectedRoute>} />
+        
+        {/* Routes accessibles via URL mais protégées par la logique Sidebar (et idéalement par des Guards supplémentaires plus tard) */}
         <Route path="/ppm-manage" element={<ProtectedRoute><MarketList mode="PPM" readOnly={false} /></ProtectedRoute>} />
         <Route path="/tracking" element={<ProtectedRoute><TrackingPage /></ProtectedRoute>} />
         <Route path="/execution" element={<ProtectedRoute><ExecutionPage /></ProtectedRoute>} />

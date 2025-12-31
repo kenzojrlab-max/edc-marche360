@@ -1,7 +1,7 @@
 // pages/Settings.tsx
 import React, { useState } from 'react';
 import { 
-  Users, Settings as SettingsIcon, Shield, Layers, Plus, Trash2, Edit2, Save, UserCheck
+  Users, Settings as SettingsIcon, Shield, Layers, Plus, Trash2, Edit2, Save, UserCheck, Check, X
 } from 'lucide-react';
 import { User, UserRole } from '../types';
 import { useMarkets } from '../contexts/MarketContext'; 
@@ -13,14 +13,36 @@ const Settings: React.FC = () => {
   
   const [newFonction, setNewFonction] = useState('');
 
+  // --- NOUVEAU : État pour stocker les rôles en cours de modification avant validation ---
+  const [pendingRoles, setPendingRoles] = useState<Record<string, UserRole>>({});
+
   const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
 
-  // CHANGEMENT DE ROLE
-  const handleRoleChange = (userId: string, newRole: UserRole) => {
+  // Gestion de la sélection temporaire (sans sauvegarde immédiate)
+  const handleRoleSelect = (userId: string, newRole: UserRole) => {
+    setPendingRoles(prev => ({ ...prev, [userId]: newRole }));
+  };
+
+  // Validation finale du changement
+  const saveRole = (userId: string) => {
+    const newRole = pendingRoles[userId];
     const userToUpdate = users.find(u => u.id === userId);
-    if (userToUpdate) {
+    
+    if (userToUpdate && newRole) {
        updateUser({ ...userToUpdate, role: newRole });
+       
+       // On nettoie l'état temporaire après validation
+       const nextPending = { ...pendingRoles };
+       delete nextPending[userId];
+       setPendingRoles(nextPending);
     }
+  };
+
+  // Annulation du changement
+  const cancelRole = (userId: string) => {
+       const nextPending = { ...pendingRoles };
+       delete nextPending[userId];
+       setPendingRoles(nextPending);
   };
 
   const handleAddUserMock = () => {
@@ -106,27 +128,54 @@ const Settings: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {users.map(u => {
                    const isGuest = u.role === UserRole.GUEST;
+                   
+                   // Détermine le rôle à afficher (celui en cours de modif OU le réel)
+                   const displayedRole = pendingRoles[u.id] || u.role;
+                   const hasPendingChange = pendingRoles[u.id] && pendingRoles[u.id] !== u.role;
+
                    return (
                     <tr key={u.id} className={`hover:bg-slate-50 ${isGuest ? 'bg-amber-50/30' : ''}`}>
                       <td className="px-6 py-4 font-medium text-slate-800">{u.nom_complet}</td>
                       <td className="px-6 py-4 text-slate-500">{u.email}</td>
                       <td className="px-6 py-4">
-                        {/* SELECTEUR DE ROLE POUR L'ADMIN */}
+                        {/* SELECTEUR DE ROLE POUR L'ADMIN AVEC VALIDATION */}
                         {isAdmin ? (
-                          <select 
-                            value={u.role}
-                            onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border-none outline-none cursor-pointer focus:ring-2 focus:ring-primary/20 ${
-                              isGuest ? 'bg-amber-100 text-amber-700' :
-                              u.role === UserRole.ADMIN ? 'bg-purple-100 text-purple-700' : 
-                              'bg-blue-100 text-blue-700'
-                            }`}
-                          >
-                            <option value={UserRole.GUEST}>INVITÉ (Restreint)</option>
-                            <option value={UserRole.USER}>UTILISATEUR (Complet)</option>
-                            <option value={UserRole.PROJECT_MANAGER}>CHEF PROJET</option>
-                            <option value={UserRole.ADMIN}>ADMINISTRATEUR</option>
-                          </select>
+                          <div className="flex items-center gap-3">
+                            <select 
+                              value={displayedRole}
+                              onChange={(e) => handleRoleSelect(u.id, e.target.value as UserRole)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold border-none outline-none cursor-pointer focus:ring-2 focus:ring-primary/20 transition-colors ${
+                                displayedRole === UserRole.GUEST ? 'bg-amber-100 text-amber-700' :
+                                displayedRole === UserRole.ADMIN ? 'bg-purple-100 text-purple-700' : 
+                                'bg-blue-100 text-blue-700'
+                              }`}
+                            >
+                              <option value={UserRole.GUEST}>INVITÉ (Restreint)</option>
+                              <option value={UserRole.USER}>UTILISATEUR (Complet)</option>
+                              <option value={UserRole.PROJECT_MANAGER}>CHEF PROJET</option>
+                              <option value={UserRole.ADMIN}>ADMINISTRATEUR</option>
+                            </select>
+
+                            {/* BOUTONS DE VALIDATION INSTANTANÉE */}
+                            {hasPendingChange && (
+                               <div className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                                  <button 
+                                    onClick={() => saveRole(u.id)} 
+                                    className="p-1.5 bg-emerald-500 text-white rounded-full hover:bg-emerald-600 shadow-md hover:scale-110 transition-transform" 
+                                    title="Valider le changement"
+                                  >
+                                    <Check size={14} />
+                                  </button>
+                                  <button 
+                                    onClick={() => cancelRole(u.id)} 
+                                    className="p-1.5 bg-slate-200 text-slate-500 rounded-full hover:bg-slate-300 hover:text-slate-700 transition-colors" 
+                                    title="Annuler"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                               </div>
+                            )}
+                          </div>
                         ) : (
                           <span className="px-2 py-1 bg-slate-100 rounded text-xs font-bold">{u.role}</span>
                         )}
@@ -139,7 +188,7 @@ const Settings: React.FC = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                         <button onClick={() => deleteUser(u.id)} className="text-slate-400 hover:text-red-600">
+                         <button onClick={() => deleteUser(u.id)} className="text-slate-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
                            <Trash2 size={16} />
                          </button>
                       </td>
