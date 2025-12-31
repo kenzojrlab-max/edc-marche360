@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { 
@@ -13,13 +14,14 @@ import {
   ClipboardList,
   ShieldCheck,
   Activity,
-  Layers // Ajout de l'icône Layers pour l'exécution
+  Layers,
+  FileText // <--- Nouvel icône pour le menu admin
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import MarketList from './pages/MarketList';
 import MarketDetail from './pages/MarketDetail';
 import TrackingPage from './pages/TrackingPage';
-import ExecutionPage from './pages/ExecutionPage.tsx'; // <--- Import de la nouvelle page
+import ExecutionPage from './pages/ExecutionPage.tsx';
 import DocumentLibrary from './pages/DocumentLibrary';
 import SettingsPage from './pages/Settings';
 import { CURRENT_USER } from './services/mockData';
@@ -96,7 +98,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             {/* 2. Plan de Passation */}
             <SidebarItem to="/ppm-view" icon={ClipboardList} label="Plan de Passation" active={location.pathname === '/ppm-view'} />
             
-            {/* 3. Documentation */}
+            {/* 3. Documentation (Menu Utilisateur) */}
             <SidebarItem to="/documents" icon={BookOpen} label="Documentation" active={location.pathname === '/documents'} />
             
             {/* SECTION ADMINISTRATION */}
@@ -115,7 +117,12 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             {/* 4c. Exécution des marchés */}
             <SidebarItem to="/execution" icon={Layers} label="Exécution des marchés" active={location.pathname === '/execution'} />
             
-            {/* 4d. Paramètres */}
+            {/* 4d. Gestion Documentaire (NOUVEAU - Menu Admin) */}
+            {isAdmin && (
+              <SidebarItem to="/documents-manage" icon={FileText} label="Gestion Documentaire" active={location.pathname === '/documents-manage'} />
+            )}
+            
+            {/* 4e. Paramètres */}
             <SidebarItem to="/settings" icon={Settings} label="Paramètres" active={location.pathname === '/settings'} />
           </nav>
 
@@ -173,11 +180,15 @@ function App() {
         <Route path="/ppm-view" element={<MarketList mode="PPM" readOnly={true} />} />
         <Route path="/ppm-manage" element={<MarketList mode="PPM" readOnly={false} />} />
         <Route path="/tracking" element={<TrackingPage />} />
-        <Route path="/execution" element={<ExecutionPage />} /> {/* Route vers la nouvelle page */}
+        <Route path="/execution" element={<ExecutionPage />} />
         <Route path="/markets/:id" element={<MarketDetail />} />
-        <Route path="/documents" element={<DocumentLibrary />} />
+        
+        {/* --- ROUTES DOCUMENTATION --- */}
+        <Route path="/documents" element={<DocumentLibrary readOnly={true} />} />
+        <Route path="/documents-manage" element={<DocumentLibrary readOnly={false} />} />
+
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/analytics" element={<Dashboard />} /> {/* Fallback pour Analytics */}
+        <Route path="/analytics" element={<Dashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

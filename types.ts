@@ -170,7 +170,7 @@ export interface LibraryDocument {
   id: string;
   titre: string;
   categorie: DocumentCategory;
-  format: 'PDF' | 'DOCX' | 'XLSX';
+  format: string; // <-- MODIFICATION ICI : string pour accepter PDF, PPT, Word, Excel, etc.
   date_upload: string;
   url: string;
   description?: string;
