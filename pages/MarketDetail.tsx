@@ -250,13 +250,13 @@ const MarketDetail: React.FC = () => {
           <RegistryRow number="3" label="Source de financement" value={market.source_financement} onChange={(v:any) => handleUpdate('source_financement', v)} />
           <RegistryRow number="4" label="Imputation budgétaire (Attestation de DF téléchargeable)" value={market.imputation_budgetaire} hasDoc doc={market.docs?.imputation} onUpload={(f: File) => handleUpload('imputation', f)} onChange={(v:any) => handleUpdate('imputation_budgetaire', v)} />
           <RegistryRow number="5" label="Saisine prévisionnelle de la CIPM" type="date" value={market.dates_realisees.saisine_cipm_prev} onChange={(v:any) => handleUpdateDate('saisine_cipm_prev', v)} />
-          <RegistryRow number="6" label="Saisine CIPM* (Documents de transmission)" type="date" value={market.dates_realisees.saisine_cipm} hasDoc doc={market.docs?.saisine} onUpload={(f: File) => handleUpload('saisine', f)} required onChange={(v:any) => handleUpdateDate('saisine_cipm', v)} />
-          <RegistryRow number="7" label="Examen DAO CIPM*" type="date" value={market.dates_realisees.examen_dao_cipm} required onChange={(v:any) => handleUpdateDate('examen_dao_cipm', v)} />
+          <RegistryRow number="6" label="Saisine CIPM (Documents de transmission)" type="date" value={market.dates_realisees.saisine_cipm} hasDoc doc={market.docs?.saisine} onUpload={(f: File) => handleUpload('saisine', f)} required onChange={(v:any) => handleUpdateDate('saisine_cipm', v)} />
+          <RegistryRow number="7" label="Examen DAO CIPM" type="date" value={market.dates_realisees.examen_dao_cipm} required onChange={(v:any) => handleUpdateDate('examen_dao_cipm', v)} />
           <RegistryRow number="8" label="Validation du dossier (PV)" hasDoc doc={market.docs?.validation_dao} onUpload={(f: File) => handleUpload('validation_dao', f)} onChange={() => {}} />
-          <RegistryRow number="9" label="ANO Bailleur* (ANO)" hasDoc doc={market.docs?.ano_bailleur_dao} onUpload={(f: File) => handleUpload('ano_bailleur_dao', f)} required onChange={() => {}} />
-          <RegistryRow number="10" label="Lancement AO* (Avis signé et publié)" type="date" value={market.dates_realisees.lancement_ao} hasDoc doc={market.docs?.lancement} onUpload={(f: File) => handleUpload('lancement', f)} required onChange={(v:any) => handleUpdateDate('lancement_ao', v)} />
+          <RegistryRow number="9" label="ANO Bailleur (ANO)" hasDoc doc={market.docs?.ano_bailleur_dao} onUpload={(f: File) => handleUpload('ano_bailleur_dao', f)} required onChange={() => {}} />
+          <RegistryRow number="10" label="Lancement AO (Avis signé et publié)" type="date" value={market.dates_realisees.lancement_ao} hasDoc doc={market.docs?.lancement} onUpload={(f: File) => handleUpload('lancement', f)} required onChange={(v:any) => handleUpdateDate('lancement_ao', v)} />
           <RegistryRow number="11" label="Additif (Document)" hasDoc doc={market.docs?.additif} onUpload={(f: File) => handleUpload('additif', f)} onChange={() => {}} />
-          <RegistryRow number="12" label="Dépouillement des offres* (PV)" type="date" value={market.dates_realisees.depouillement} hasDoc doc={market.docs?.depouillement} onUpload={(f: File) => handleUpload('depouillement', f)} required onChange={(v:any) => handleUpdateDate('depouillement', v)} />
+          <RegistryRow number="12" label="Dépouillement des offres (PV)" type="date" value={market.dates_realisees.depouillement} hasDoc doc={market.docs?.depouillement} onUpload={(f: File) => handleUpload('depouillement', f)} required onChange={(v:any) => handleUpdateDate('depouillement', v)} />
           <RegistryRow number="13" label="Validation rapport évaluation (PV)" hasDoc doc={market.docs?.validation_eval} onUpload={(f: File) => handleUpload('validation_eval', f)} onChange={() => {}} />
           <RegistryRow number="14" label="ANO bailleurs (ANO)" hasDoc doc={market.docs?.ano_eval} onUpload={(f: File) => handleUpload('ano_eval', f)} onChange={() => {}} />
           <RegistryRow number="15" label="Ouvertures offres financières (PV)" hasDoc doc={market.docs?.ouverture_fin} onUpload={(f: File) => handleUpload('ouverture_fin', f)} onChange={() => {}} />
@@ -265,7 +265,7 @@ const MarketDetail: React.FC = () => {
           <div className="p-6 bg-red-50/20 border-y border-red-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-black text-red-400">16.</span>
-              <span className="text-[11px] font-black text-red-900 uppercase">Infructueux ?</span>
+              <span className="text-[11px] font-black text-red-900 uppercase">Infructueux</span>
             </div>
             <div className="flex items-center gap-4">
               <select 
@@ -282,18 +282,18 @@ const MarketDetail: React.FC = () => {
             </div>
           </div>
 
-          <RegistryRow number="17" label="Proposition attribution CIPM* (PV)" hasDoc doc={market.docs?.prop_attrib} onUpload={(f: File) => handleUpload('prop_attrib', f)} required onChange={() => {}} />
-          <RegistryRow number="18" label="Avis conforme CA* (Avis)" hasDoc doc={market.docs?.avis_ca} onUpload={(f: File) => handleUpload('avis_ca', f)} required onChange={() => {}} />
-          <RegistryRow number="19" label="ANO Bailleurs* (ANO)" hasDoc doc={market.docs?.ano_attrib} onUpload={(f: File) => handleUpload('ano_attrib', f)} required onChange={() => {}} />
-          <RegistryRow number="20" label="Publication* (décision/communiqué)" hasDoc doc={market.docs?.publication} onUpload={(f: File) => handleUpload('publication', f)} required onChange={() => {}} />
+          <RegistryRow number="17" label="Proposition attribution CIPM (PV)" hasDoc doc={market.docs?.prop_attrib} onUpload={(f: File) => handleUpload('prop_attrib', f)} required onChange={() => {}} />
+          <RegistryRow number="18" label="Avis conforme CA (Avis)" hasDoc doc={market.docs?.avis_ca} onUpload={(f: File) => handleUpload('avis_ca', f)} required onChange={() => {}} />
+          <RegistryRow number="19" label="ANO Bailleurs (ANO)" hasDoc doc={market.docs?.ano_attrib} onUpload={(f: File) => handleUpload('ano_attrib', f)} required onChange={() => {}} />
+          <RegistryRow number="20" label="Publication (décision/communiqué)" hasDoc doc={market.docs?.publication} onUpload={(f: File) => handleUpload('publication', f)} required onChange={() => {}} />
           <RegistryRow number="21" label="Notification attribution (Notification)" hasDoc doc={market.docs?.notif_attrib} onUpload={(f: File) => handleUpload('notif_attrib', f)} onChange={() => {}} />
           <RegistryRow number="22" label="Titulaire" value={market.titulaire} onChange={(v:any) => handleUpdate('titulaire', v)} />
           <RegistryRow number="23" label="Montant TTC en FCFA" type="number" value={market.montant_ttc_reel} onChange={(v:any) => handleUpdate('montant_ttc_reel', v)} />
-          <RegistryRow number="24" label="Souscription projet marché*" type="date" value={market.dates_realisees.souscription_projet} required onChange={(v:any) => handleUpdateDate('souscription_projet', v)} />
-          <RegistryRow number="25" label="Saisine CIPM projet* (Transmis.)" type="date" value={market.dates_realisees.saisine_cipm_projet} hasDoc doc={market.docs?.saisine_projet} onUpload={(f: File) => handleUpload('saisine_projet', f)} required onChange={(v:any) => handleUpdateDate('saisine_cipm_projet', v)} />
-          <RegistryRow number="26" label="Examen projet marché CIPM*" type="date" value={market.dates_realisees.examen_projet_cipm} required onChange={(v:any) => handleUpdateDate('examen_projet_cipm', v)} />
+          <RegistryRow number="24" label="Souscription projet marché" type="date" value={market.dates_realisees.souscription_projet} required onChange={(v:any) => handleUpdateDate('souscription_projet', v)} />
+          <RegistryRow number="25" label="Saisine CIPM projet (Transmis.)" type="date" value={market.dates_realisees.saisine_cipm_projet} hasDoc doc={market.docs?.saisine_projet} onUpload={(f: File) => handleUpload('saisine_projet', f)} required onChange={(v:any) => handleUpdateDate('saisine_cipm_projet', v)} />
+          <RegistryRow number="26" label="Examen projet marché CIPM" type="date" value={market.dates_realisees.examen_projet_cipm} required onChange={(v:any) => handleUpdateDate('examen_projet_cipm', v)} />
           <RegistryRow number="27" label="Validation (PV)" hasDoc doc={market.docs?.validation_projet} onUpload={(f: File) => handleUpload('validation_projet', f)} onChange={() => {}} />
-          <RegistryRow number="28" label="ANO bailleurs* (ANO)" hasDoc doc={market.docs?.ano_projet} onUpload={(f: File) => handleUpload('ano_projet', f)} required onChange={() => {}} />
+          <RegistryRow number="28" label="ANO bailleurs (ANO)" hasDoc doc={market.docs?.ano_projet} onUpload={(f: File) => handleUpload('ano_projet', f)} required onChange={() => {}} />
           <RegistryRow number="29" label="Signature marché (marché signé)" hasDoc doc={market.docs?.marche_signe} onUpload={(f: File) => handleUpload('marche_signe', f)} onChange={() => {}} />
 
           {/* 30. ANNULE AVEC MOTIF + ACCORD CA OBLIGATOIRE */}
@@ -301,7 +301,7 @@ const MarketDetail: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-black text-slate-500">30.</span>
-                <span className="text-[11px] font-black uppercase tracking-widest text-amber-400">Annulé ?</span>
+                <span className="text-[11px] font-black uppercase tracking-widest text-amber-400">Annulé</span>
               </div>
               <div className="flex bg-white/10 rounded-xl p-1 border border-white/20">
                 <button onClick={() => handleUpdate('is_annule', true)} className={`px-5 py-2 text-[9px] font-black rounded-lg transition-all ${market.is_annule ? 'bg-amber-500 text-slate-900' : 'text-slate-400'}`}>OUI</button>
@@ -336,14 +336,14 @@ const MarketDetail: React.FC = () => {
             )}
           </div>
 
-          <RegistryRow number="31" label="Notification*" type="date" value={market.dates_realisees.notification} required onChange={(v:any) => handleUpdateDate('notification', v)} />
+          <RegistryRow number="31" label="Notification" type="date" value={market.dates_realisees.notification} required onChange={(v:any) => handleUpdateDate('notification', v)} />
           
           {/* 32. RECOURS AVEC OUI/NON + ISSUE + UPLOAD */}
           <div className="p-6 bg-orange-50/50 border-y border-orange-100 flex flex-col gap-4">
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                    <span className="text-[10px] font-black text-orange-400">32.</span>
-                   <span className="text-[11px] font-black text-orange-900 uppercase">Recours (Contentieux) ?</span>
+                   <span className="text-[11px] font-black text-orange-900 uppercase">Recours (Contentieux)</span>
                 </div>
                 <div className="flex bg-white border border-orange-200 rounded-xl p-1">
                    <button onClick={() => handleUpdate('has_recours', true)} className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${market.has_recours ? 'bg-orange-500 text-white' : 'text-slate-400'}`}>OUI</button>

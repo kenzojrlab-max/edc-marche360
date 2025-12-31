@@ -277,39 +277,39 @@ const TrackingPage: React.FC = () => {
                 <th className="px-3 py-3 border-r border-slate-200">4. Imputation (Attest. DF)</th>
                 
                 <th className="px-3 py-3 border-r border-slate-200 text-center">5. Saisine prév. CIPM</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center">6. Saisine CIPM*</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center">7. Examen DAO CIPM*</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">6. Saisine CIPM</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">7. Examen DAO CIPM</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">8. Validation dossier (PV)</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">9. ANO Bailleur*</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">9. ANO Bailleur</th>
 
-                <th className="px-3 py-3 border-r border-slate-200 text-center">10. Lancement AO*</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">10. Lancement AO</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">11. Additif (Doc)</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center">12. Dépouillement* (PV)</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">12. Dépouillement (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">13. Valid. Éval. (PV)</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">14. ANO bailleurs</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">15. Ouvertures Fin. (PV)</th>
 
                 <th className="px-3 py-3 border-r border-slate-200 text-center">16. Infructueux</th>
 
-                <th className="px-3 py-3 border-r border-slate-200 text-center">17. Prop. Attrib.* (PV)</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center">18. Avis conforme CA*</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">19. ANO Bailleurs*</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center">20. Publication*</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">17. Prop. Attrib. (PV)</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">18. Avis conforme CA</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">19. ANO Bailleurs</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">20. Publication</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">21. Notification Attrib.</th>
 
                 <th className="px-3 py-3 border-r border-slate-200 min-w-[120px]">22. Titulaire</th>
                 <th className="px-3 py-3 border-r border-slate-200">23. Montant TTC</th>
 
-                <th className="px-3 py-3 border-r border-slate-200 text-center">24. Souscription*</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center">25. Saisine Projet*</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center">26. Examen Projet*</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">24. Souscription</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">25. Saisine Projet</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">26. Examen Projet</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">27. Validation (PV)</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">28. ANO bailleurs*</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">28. ANO bailleurs</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">29. Signature Marché</th>
 
                 <th className="px-3 py-3 border-r border-slate-200 text-center min-w-[180px]">30. Annulé</th>
 
-                <th className="px-3 py-3 border-r border-slate-200 text-center">31. Notification*</th>
+                <th className="px-3 py-3 border-r border-slate-200 text-center">31. Notification</th>
                 <th className="px-3 py-3 border-r border-slate-200 min-w-[180px]">32. Recours (Contentieux)</th>
                 <th className="px-3 py-3">33. Etat d'avancement</th>
               </tr>
