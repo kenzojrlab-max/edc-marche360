@@ -250,8 +250,10 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
                           <div 
                             key={idx} 
                             onClick={() => {
-                              // --- CORRECTION ICI : Redirection vers la fiche Détail ---
-                              navigate(`/markets/${alert.market.id}`); 
+                              // --- CORRECTION MAJEURE ICI ---
+                              // Redirection vers /ppm-view (Liste de consultation) au lieu de /markets (Détail)
+                              // On passe l'ID en paramètre query string (?id=...)
+                              navigate(`/ppm-view?id=${encodeURIComponent(alert.market.id)}`); 
                               setShowNotifications(false);
                             }}
                             className="p-4 hover:bg-slate-50 cursor-pointer group transition-colors"

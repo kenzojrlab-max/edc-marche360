@@ -1,6 +1,6 @@
 // pages/MarketList.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom'; // AJOUT : Import useSearchParams
 import * as XLSX from 'xlsx';
 import { 
   Search, Download, Filter, Clock, Calendar, 
@@ -348,6 +348,9 @@ interface MarketListProps {
 const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
   const { marches, updateMarche, addMarche, projets, addProjet, updateProjet, fonctions } = useMarkets();
   
+  // --- AJOUT : RECUPERATION DU PARAMETRE ID DEPUIS L'URL ---
+  const [searchParams] = useSearchParams();
+
   const [selectedYear, setSelectedYear] = useState(2024);
   const [selectedProjetId, setSelectedProjetId] = useState<string | null>(null);
   const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
@@ -370,6 +373,24 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     montant_prevu: 0, delai_global_passation: 0, source_financement: SourceFinancement.BUDGET_EDC, bailleur_nom: '', imputation_budgetaire: '',
     dates_prevues: {} as any, statut_global: StatutGlobal.PLANIFIE, hors_ppm: false, exercice: 2024
   });
+
+  // --- EFFET DE REDIRECTION AUTOMATIQUE (Correction du bug) ---
+  // Dès que le composant monte ou que l'URL change, on vérifie si un ID est présent
+  useEffect(() => {
+    const targetId = searchParams.get('id');
+    // On ne lance la logique que si on a un ID et des marchés chargés
+    if (targetId && marches.length > 0) {
+       const targetMarket = marches.find(m => m.id === targetId);
+       if (targetMarket) {
+          // On sélectionne le bon contexte (Année / Projet)
+          setSelectedYear(targetMarket.exercice);
+          setSelectedProjetId(targetMarket.projet_id);
+          // On "ouvre" la ligne (expand) pour afficher les détails inline
+          setExpandedMarketId(targetMarket.id);
+       }
+    }
+  }, [searchParams, marches]);
+
 
   useEffect(() => {
     setActiveTab('PASSATION');
