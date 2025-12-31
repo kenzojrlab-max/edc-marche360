@@ -1,9 +1,35 @@
-import React, { useState, useRef } from 'react';
+// pages/MarketDetail.tsx
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { 
   ArrowLeft, Upload, Download, Save, ListOrdered
 } from 'lucide-react';
 import { useMarkets } from '../contexts/MarketContext'; 
+import { Marche } from '../types';
+
+// --- FONCTION INTELLIGENTE DE CALCUL DU STATUT ---
+const calculateStatus = (market: Marche): string => {
+  // 1. Statuts prioritaires
+  if (market.is_annule) return "Annulé";
+  if (market.is_infructueux) return "Infructueux";
+
+  // 2. Vérification chronologique inverse (du plus avancé au moins avancé)
+  const d = market.dates_realisees;
+
+  if (d.notification) return "Notifié"; // Fin de passation
+  if (d.signature_marche) return "Signé";
+  if (d.souscription_projet) return "En cours de signature"; 
+  if (d.notification_attrib || d.publication) return "Attribué"; 
+  if (d.prop_attrib_cipm || d.avis_conforme_ca) return "Attribution provisoire";
+  if (d.ouverture_financiere) return "Ouverture Fin.";
+  if (d.depouillement) return "En évaluation"; 
+  if (d.lancement_ao) return "En cours de consultation"; 
+  if (d.ano_bailleur_dao) return "ANO Bailleur obtenu";
+  if (d.examen_dao_cipm) return "Examen DAO"; 
+  if (d.saisine_cipm) return "En préparation DAO"; 
+  
+  return "Inscrit au PPM"; // Statut par défaut
+};
 
 // --- Composant Ligne de Registre Standard ---
 const RegistryRow = ({ 
@@ -136,6 +162,16 @@ const MarketDetail: React.FC = () => {
       return null;
   }
 
+  // --- MISE A JOUR AUTOMATIQUE DU STATUT ---
+  // A chaque fois que 'market' change, on recalcule le statut
+  useEffect(() => {
+    const newStatus = calculateStatus(market);
+    if (newStatus !== market.etat_avancement) {
+        setMarket(prev => prev ? ({ ...prev, etat_avancement: newStatus }) : null);
+    }
+  }, [market.dates_realisees, market.is_annule, market.is_infructueux]);
+
+
   const handleUpdate = (field: string, val: any) => {
     setMarket({ ...market, [field]: val });
   };
@@ -175,8 +211,14 @@ const MarketDetail: React.FC = () => {
             <ArrowLeft size={18} />
           </button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <span className="text-[10px] font-black text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-full">{market.id}</span>
+              
+              {/* --- AJOUT AUTOMATIQUE DU STATUT DANS L'EN-TÊTE --- */}
+              <span className={`text-[9px] font-black text-white px-2 py-0.5 rounded-full uppercase ${market.is_annule || market.is_infructueux ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                {market.etat_avancement}
+              </span>
+
               <h1 className="text-lg font-black text-slate-800 uppercase truncate max-w-md">{market.objet}</h1>
             </div>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registre de Passation - EDC S.A.</p>
@@ -335,20 +377,16 @@ const MarketDetail: React.FC = () => {
              <div className="flex flex-col space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-black text-slate-400">33.</span>
-                  <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Etat d’avancement du dossier</span>
+                  <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Etat d’avancement du dossier (Automatique)</span>
                 </div>
-                <select 
+                {/* --- CHAMP LECTURE SEULE CAR AUTOMATIQUE --- */}
+                <input 
+                  type="text"
                   value={market.etat_avancement}
-                  onChange={(e) => handleUpdate('etat_avancement', e.target.value)}
-                  className="w-full bg-white border-2 border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-800 outline-none appearance-none cursor-pointer focus:border-primary transition-all shadow-sm"
-                >
-                  <option>En préparation DAO</option>
-                  <option>En cours de consultation</option>
-                  <option>En évaluation</option>
-                  <option>En cours de signature</option>
-                  <option>Notifié</option>
-                  <option>Clôturé</option>
-                </select>
+                  disabled
+                  className="w-full bg-slate-100 border-2 border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-600 outline-none uppercase tracking-wide cursor-not-allowed"
+                />
+                <p className="text-[9px] text-slate-400 italic">Ce champ est mis à jour automatiquement en fonction des dates saisies ci-dessus.</p>
              </div>
           </div>
         </div>

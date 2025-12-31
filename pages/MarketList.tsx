@@ -477,12 +477,38 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        // CORRECTION 1: Ajout de cellDates: true pour forcer le parsing des dates
+        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
         const sheetName = workbook.SheetNames[0]; 
         const sheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(sheet);
 
         let importedCount = 0;
+
+        // CORRECTION 2: Fonction utilitaire pour formater la date proprement
+        const formatExcelDate = (val: any) => {
+            if (!val) return undefined;
+            
+            // Si c'est un objet Date JS (grâce à cellDates: true)
+            if (val instanceof Date) {
+               // Astuce pour éviter les problèmes de timezone : utiliser getFullYear, etc.
+               const year = val.getFullYear();
+               const month = String(val.getMonth() + 1).padStart(2, '0');
+               const day = String(val.getDate()).padStart(2, '0');
+               return `${year}-${month}-${day}`;
+            }
+            
+            // Fallback si jamais c'est resté un nombre (ex: 45355)
+            if (typeof val === 'number') {
+                const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            return String(val); // Sinon on retourne tel quel (cas string déjà formatée)
+        };
 
         jsonData.forEach((row: any) => {
             const newMarket: Marche = {
@@ -510,22 +536,23 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                 has_recours: false,
                 etat_avancement: 'Inscrit au PPM',
                 
+                // CORRECTION 3: Application du formateur sur tous les champs date
                 dates_prevues: {
-                    saisine_cipm: row["Saisine CIPM"],
-                    examen_dao_cipm: row["Examen DAO"],
-                    ano_bailleur_dao: row["ANO Bailleur (DAO)"],
-                    lancement_ao: row["Lancement AO"],
-                    depouillement: row["Dépouillement"],
-                    prop_attrib_cipm: row["Prop. Attribution"],
-                    avis_conforme_ca: row["Avis CA"],
-                    ano_bailleur_attrib: row["ANO Bailleur (Attrib)"],
-                    publication: row["Publication"],
-                    souscription_projet: row["Souscription"],
-                    saisine_cipm_projet: row["Saisine Projet"],
-                    examen_projet_cipm: row["Examen Projet"],
-                    ano_bailleur_projet: row["ANO Bailleur (Projet)"],
-                    signature_marche: row["Signature"],
-                    notification: row["Notification"],
+                    saisine_cipm: formatExcelDate(row["Saisine CIPM"]),
+                    examen_dao_cipm: formatExcelDate(row["Examen DAO"]),
+                    ano_bailleur_dao: formatExcelDate(row["ANO Bailleur (DAO)"]),
+                    lancement_ao: formatExcelDate(row["Lancement AO"]),
+                    depouillement: formatExcelDate(row["Dépouillement"]),
+                    prop_attrib_cipm: formatExcelDate(row["Prop. Attribution"]),
+                    avis_conforme_ca: formatExcelDate(row["Avis CA"]),
+                    ano_bailleur_attrib: formatExcelDate(row["ANO Bailleur (Attrib)"]),
+                    publication: formatExcelDate(row["Publication"]),
+                    souscription_projet: formatExcelDate(row["Souscription"]),
+                    saisine_cipm_projet: formatExcelDate(row["Saisine Projet"]),
+                    examen_projet_cipm: formatExcelDate(row["Examen Projet"]),
+                    ano_bailleur_projet: formatExcelDate(row["ANO Bailleur (Projet)"]),
+                    signature_marche: formatExcelDate(row["Signature"]),
+                    notification: formatExcelDate(row["Notification"]),
                     saisine_cipm_prev: undefined,
                     validation_dao: undefined,
                     additif: undefined,
