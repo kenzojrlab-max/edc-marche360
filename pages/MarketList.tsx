@@ -12,6 +12,9 @@ import { formatFCFA, calculateDaysBetween } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, StatutGlobal, Marche, Projet } from '../types';
 import { useMarkets } from '../contexts/MarketContext'; 
 
+// --- DATE DU JOUR POUR LES ALERTES ---
+const today = new Date().toISOString().split('T')[0];
+
 // --- COMPOSANT MODAL DE CONSULTATION (VUE UTILISATEUR) ---
 const ExecutionViewModal = ({ 
   type, 
@@ -343,7 +346,6 @@ interface MarketListProps {
 }
 
 const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
-  // CORRECTION ICI : Ajout de updateProjet
   const { marches, updateMarche, addMarche, projets, addProjet, updateProjet, fonctions } = useMarkets();
   
   const [selectedYear, setSelectedYear] = useState(2024);
@@ -414,14 +416,13 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     updateMarche(updatedMarket);
   };
 
-  // --- AJOUT DE LA FONCTION POUR UPLOADER LE PPM (POUR EVITER LES BUGS) ---
   const handlePpmUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && currentProjet) {
       const file = e.target.files[0];
       const url = URL.createObjectURL(file);
       updateProjet({ ...currentProjet, ppm_pdf_url: url });
       alert("PPM signé chargé avec succès !");
-      e.target.value = ''; // Réinitialiser pour permettre le ré-upload si besoin
+      e.target.value = ''; 
     }
   };
 
@@ -477,7 +478,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        // CORRECTION 1: Ajout de cellDates: true pour forcer le parsing des dates
         const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
         const sheetName = workbook.SheetNames[0]; 
         const sheet = workbook.Sheets[sheetName];
@@ -485,20 +485,16 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
 
         let importedCount = 0;
 
-        // CORRECTION 2: Fonction utilitaire pour formater la date proprement
         const formatExcelDate = (val: any) => {
             if (!val) return undefined;
             
-            // Si c'est un objet Date JS (grâce à cellDates: true)
             if (val instanceof Date) {
-               // Astuce pour éviter les problèmes de timezone : utiliser getFullYear, etc.
                const year = val.getFullYear();
                const month = String(val.getMonth() + 1).padStart(2, '0');
                const day = String(val.getDate()).padStart(2, '0');
                return `${year}-${month}-${day}`;
             }
             
-            // Fallback si jamais c'est resté un nombre (ex: 45355)
             if (typeof val === 'number') {
                 const date = new Date(Math.round((val - 25569) * 86400 * 1000));
                 const year = date.getFullYear();
@@ -507,7 +503,7 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                 return `${year}-${month}-${day}`;
             }
 
-            return String(val); // Sinon on retourne tel quel (cas string déjà formatée)
+            return String(val); 
         };
 
         jsonData.forEach((row: any) => {
@@ -536,7 +532,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                 has_recours: false,
                 etat_avancement: 'Inscrit au PPM',
                 
-                // CORRECTION 3: Application du formateur sur tous les champs date
                 dates_prevues: {
                     saisine_cipm: formatExcelDate(row["Saisine CIPM"]),
                     examen_dao_cipm: formatExcelDate(row["Examen DAO"]),
@@ -684,7 +679,7 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                    <div className="flex items-center gap-3 mt-1">
                      <p className="text-slate-400 text-[10px] font-black uppercase">Source : {currentProjet?.source_financement} {currentProjet?.bailleur_nom ? `(${currentProjet.bailleur_nom})` : ''}</p>
                      
-                     {/* --- MODIFICATION PPM SIGNE --- */}
+                     {/* --- PPM SIGNE --- */}
                      {currentProjet && (
                        <>
                          <div className="h-3 w-px bg-slate-300"></div>
@@ -738,7 +733,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                          )}
                        </>
                      )}
-                     {/* --- FIN MODIFICATION --- */}
                    </div>
                 </div>
              </div>
@@ -789,7 +783,6 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                      const delaiReel = calculateDaysBetween(m.dates_realisees.saisine_cipm, m.dates_realisees.signature_marche);
                      const isEDC = m.source_financement === SourceFinancement.BUDGET_EDC;
                      
-                     // --- LOGIQUE DE VERROUILLAGE ---
                      const isExecutionLocked = !m.dates_realisees.signature_marche;
 
                      return (
@@ -811,10 +804,45 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                             {jalonCols.map(jalon => {
                               const isAno = jalon.key.toLowerCase().includes('ano');
                               const displayDisabled = isAno && isEDC;
+                              const prevue = m.dates_prevues[jalon.key];
+                              const realisee = m.dates_realisees[jalon.key];
+                              
+                              // LOGIQUE D'AFFICHAGE ET D'ALERTE POUR LA CELLULE RÉELLE
+                              let realClass = '';
+                              let realContent = realisee || '—';
+
+                              if (displayDisabled) {
+                                  realClass = 'text-slate-200 bg-slate-50/50';
+                                  realContent = 'N/A';
+                              } else if (realisee) {
+                                  // Si réalisé : Vert (OK) ou Rouge pâle (Retard)
+                                  if (prevue && new Date(realisee) > new Date(prevue)) {
+                                      realClass = 'text-red-500 bg-red-50/10';
+                                  } else {
+                                      realClass = 'text-emerald-600 bg-emerald-50/10';
+                                  }
+                              } else {
+                                  // Si NON réalisé : Vérifier si la date prévue est passée (ALERTE)
+                                  if (prevue && new Date(today) > new Date(prevue)) {
+                                      realClass = 'text-red-600 bg-red-100 font-bold border border-red-200 animate-pulse'; // Style Alerte
+                                      realContent = 'EN RETARD';
+                                  } else {
+                                      realClass = 'text-slate-200'; // Futur / Attente
+                                  }
+                              }
+
                               return (
                                 <React.Fragment key={`val-${m.id}-${jalon.key}`}>
-                                  <td className={`px-4 py-4 text-center border-r border-slate-50 font-mono text-[10px] ${displayDisabled ? 'text-slate-200 bg-slate-50/50' : 'text-slate-400 bg-blue-50/5'}`}>{displayDisabled ? 'N/A' : (m.dates_prevues[jalon.key] || '—')}</td>
-                                  <td className={`px-4 py-4 text-center border-r border-slate-100 font-mono text-[10px] font-black ${displayDisabled ? 'text-slate-200 bg-slate-50/50' : (m.dates_prevues[jalon.key] && m.dates_realisees[jalon.key] && new Date(m.dates_realisees[jalon.key]!) > new Date(m.dates_prevues[jalon.key]!) ? 'text-red-500 bg-red-50/10' : m.dates_realisees[jalon.key] ? 'text-emerald-600 bg-emerald-50/10' : 'text-slate-200')}`}>{displayDisabled ? 'N/A' : (m.dates_realisees[jalon.key] || '—')}</td>
+                                  {/* Colonne Prévue */}
+                                  <td className={`px-4 py-4 text-center border-r border-slate-50 font-mono text-[10px] ${displayDisabled ? 'text-slate-200 bg-slate-50/50' : 'text-slate-400 bg-blue-50/5'}`}>
+                                    {displayDisabled ? 'N/A' : (prevue || '—')}
+                                  </td>
+                                  
+                                  {/* Colonne Réelle avec Alerte */}
+                                  <td className={`px-4 py-4 text-center border-r border-slate-100 font-mono text-[10px] font-black ${realClass}`}>
+                                     {realContent === 'EN RETARD' && <AlertCircle size={10} className="inline mr-1" />}
+                                     {realContent}
+                                  </td>
                                 </React.Fragment>
                               );
                             })}
