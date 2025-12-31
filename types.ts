@@ -3,7 +3,8 @@ export enum UserRole {
   ADMIN = 'ADMIN',
   SUPER_ADMIN = 'SUPER_ADMIN',
   USER = 'USER',
-  PROJECT_MANAGER = 'PROJECT_MANAGER'
+  PROJECT_MANAGER = 'PROJECT_MANAGER',
+  GUEST = 'GUEST' // <--- AJOUT : Rôle par défaut à l'inscription
 }
 
 export interface User {
@@ -12,6 +13,7 @@ export interface User {
   nom_complet: string;
   role: UserRole;
   projets_autorises: string[];
+  password?: string; // <--- AJOUT : Pour la simulation d'inscription
 }
 
 export enum SourceFinancement {
@@ -170,7 +172,7 @@ export interface LibraryDocument {
   id: string;
   titre: string;
   categorie: DocumentCategory;
-  format: string; // <-- MODIFICATION ICI : string pour accepter PDF, PPT, Word, Excel, etc.
+  format: string;
   date_upload: string;
   url: string;
   description?: string;

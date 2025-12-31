@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { 
   Search, FileText, Download, Folder, Calendar, User, File, 
   Trash2, Plus, X, FileSpreadsheet, Presentation, FileCode,
-  FileCheck, Upload
+  FileCheck, Upload, Lock
 } from 'lucide-react';
 import { DocumentCategory, LibraryDocument, UserRole } from '../types';
 import { useMarkets } from '../contexts/MarketContext';
@@ -46,6 +46,8 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
+  // VERIFICATION DU ROLE GUEST
+  const isGuest = CURRENT_USER.role === UserRole.GUEST;
 
   // Filtering Logic
   const filteredDocs = documents.filter(doc => {
@@ -222,14 +224,22 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1">
                      <span className="text-slate-300">{doc.taille}</span>
-                     <a 
-                        href={doc.url} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="text-primary hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg transition-colors"
-                     >
-                       <Download size={12} /> Télécharger
-                     </a>
+                     
+                     {/* LOGIQUE RESTRICTION INVITE */}
+                     {isGuest ? (
+                       <span className="text-slate-400 flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg cursor-not-allowed opacity-60" title="Téléchargement restreint">
+                         <Lock size={12} /> Accès restreint
+                       </span>
+                     ) : (
+                       <a 
+                          href={doc.url} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="text-primary hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg transition-colors"
+                       >
+                         <Download size={12} /> Télécharger
+                       </a>
+                     )}
                   </div>
                 </div>
               </div>

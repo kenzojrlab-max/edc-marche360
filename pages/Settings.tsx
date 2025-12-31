@@ -1,24 +1,34 @@
 // pages/Settings.tsx
 import React, { useState } from 'react';
 import { 
-  Users, Settings as SettingsIcon, Shield, Layers, Plus, Trash2, Edit2, Save
+  Users, Settings as SettingsIcon, Shield, Layers, Plus, Trash2, Edit2, Save, UserCheck
 } from 'lucide-react';
 import { User, UserRole } from '../types';
-import { useMarkets } from '../contexts/MarketContext'; // <--- Import Context
+import { useMarkets } from '../contexts/MarketContext'; 
+import { CURRENT_USER } from '../services/mockData';
 
 const Settings: React.FC = () => {
-  const { users, fonctions, addUser, deleteUser, addFonction, deleteFonction } = useMarkets(); // <--- Hooks
+  const { users, fonctions, addUser, updateUser, deleteUser, addFonction, deleteFonction } = useMarkets();
   const [activeTab, setActiveTab] = useState<'USERS' | 'CONFIG'>('USERS');
   
   const [newFonction, setNewFonction] = useState('');
 
-  // Pour démo ajout user simplifié
+  const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
+
+  // CHANGEMENT DE ROLE
+  const handleRoleChange = (userId: string, newRole: UserRole) => {
+    const userToUpdate = users.find(u => u.id === userId);
+    if (userToUpdate) {
+       updateUser({ ...userToUpdate, role: newRole });
+    }
+  };
+
   const handleAddUserMock = () => {
       const u: User = {
           id: `u${Date.now()}`,
           nom_complet: "Nouvel Utilisateur",
           email: "user@edc.cm",
-          role: UserRole.USER,
+          role: UserRole.GUEST,
           projets_autorises: []
       }
       addUser(u);
@@ -79,7 +89,7 @@ const Settings: React.FC = () => {
              <h3 className="text-lg font-bold text-slate-800">Liste des Utilisateurs</h3>
              <button onClick={handleAddUserMock} className="flex items-center px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-800 shadow-sm transition-colors">
                 <Plus size={16} className="mr-2" />
-                Nouvel Utilisateur
+                Simuler Ajout
              </button>
           </div>
           <div className="overflow-x-auto">
@@ -88,36 +98,54 @@ const Settings: React.FC = () => {
                 <tr>
                   <th className="px-6 py-4">Nom Complet</th>
                   <th className="px-6 py-4">Email</th>
-                  <th className="px-6 py-4">Rôle</th>
-                  <th className="px-6 py-4">Périmètre Projets</th>
+                  <th className="px-6 py-4">Rôle & Droits</th>
+                  <th className="px-6 py-4">Statut</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {users.map(u => (
-                  <tr key={u.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium text-slate-800">{u.nom_complet}</td>
-                    <td className="px-6 py-4 text-slate-500">{u.email}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                        u.role === UserRole.ADMIN || u.role === UserRole.SUPER_ADMIN ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 text-xs">
-                      {u.projets_autorises.join(', ')}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                       <button className="text-slate-400 hover:text-blue-600 mr-3">
-                         <Edit2 size={16} />
-                       </button>
-                       <button onClick={() => deleteUser(u.id)} className="text-slate-400 hover:text-red-600">
-                         <Trash2 size={16} />
-                       </button>
-                    </td>
-                  </tr>
-                ))}
+                {users.map(u => {
+                   const isGuest = u.role === UserRole.GUEST;
+                   return (
+                    <tr key={u.id} className={`hover:bg-slate-50 ${isGuest ? 'bg-amber-50/30' : ''}`}>
+                      <td className="px-6 py-4 font-medium text-slate-800">{u.nom_complet}</td>
+                      <td className="px-6 py-4 text-slate-500">{u.email}</td>
+                      <td className="px-6 py-4">
+                        {/* SELECTEUR DE ROLE POUR L'ADMIN */}
+                        {isAdmin ? (
+                          <select 
+                            value={u.role}
+                            onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border-none outline-none cursor-pointer focus:ring-2 focus:ring-primary/20 ${
+                              isGuest ? 'bg-amber-100 text-amber-700' :
+                              u.role === UserRole.ADMIN ? 'bg-purple-100 text-purple-700' : 
+                              'bg-blue-100 text-blue-700'
+                            }`}
+                          >
+                            <option value={UserRole.GUEST}>INVITÉ (Restreint)</option>
+                            <option value={UserRole.USER}>UTILISATEUR (Complet)</option>
+                            <option value={UserRole.PROJECT_MANAGER}>CHEF PROJET</option>
+                            <option value={UserRole.ADMIN}>ADMINISTRATEUR</option>
+                          </select>
+                        ) : (
+                          <span className="px-2 py-1 bg-slate-100 rounded text-xs font-bold">{u.role}</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {isGuest ? (
+                          <span className="flex items-center gap-1 text-amber-600 text-[10px] font-black uppercase"><Shield size={12} /> Accès limité</span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase"><UserCheck size={12} /> Validé</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                         <button onClick={() => deleteUser(u.id)} className="text-slate-400 hover:text-red-600">
+                           <Trash2 size={16} />
+                         </button>
+                      </td>
+                    </tr>
+                   );
+                })}
               </tbody>
             </table>
           </div>

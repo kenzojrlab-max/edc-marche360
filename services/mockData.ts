@@ -1,198 +1,255 @@
-import { Marche, SourceFinancement, StatutGlobal, User, UserRole, ConfigFonction, Projet, LibraryDocument, DocumentCategory } from '../types';
+// services/mockData.ts
+import { Marche, StatutGlobal, SourceFinancement, User, UserRole, Projet, ConfigFonction, LibraryDocument, DocumentCategory } from '../types';
 
 export const CURRENT_USER: User = {
   id: 'u1',
   email: 'admin@edc.cm',
-  nom_complet: 'Administrateur Marchés',
+  nom_complet: 'Administrateur Principal',
   role: UserRole.ADMIN,
-  projets_autorises: ['EDC_2024', 'BM_2024']
+  projets_autorises: []
 };
 
 export const MOCK_USERS: User[] = [
   CURRENT_USER,
   {
     id: 'u2',
-    email: 'j.douglas@edc.cm',
-    nom_complet: 'Jean Douglas',
+    email: 'chef.projet@edc.cm',
+    nom_complet: 'Jean Dupont',
     role: UserRole.PROJECT_MANAGER,
-    projets_autorises: ['EDC_2024']
+    projets_autorises: ['PROJ_001']
   },
   {
     id: 'u3',
-    email: 'm.ngono@edc.cm',
-    nom_complet: 'Marie Ngono',
-    role: UserRole.USER,
-    projets_autorises: ['BM_2024']
+    email: 'invite@edc.cm',
+    nom_complet: 'Visiteur Externe',
+    role: UserRole.GUEST,
+    projets_autorises: []
   }
 ];
 
 export const CONFIG_FONCTIONS: ConfigFonction[] = [
-  { libelle: "Exploitation et maintenance" },
-  { libelle: "Développement des projets" },
-  { libelle: "EDC support" }
+  { libelle: 'Direction Générale' },
+  { libelle: 'Direction Technique' },
+  { libelle: 'Direction Financière' },
+  { libelle: 'Division des Marchés' }
+];
+
+// --- AJOUT MANQUANT : DOCUMENTS DE LA BIBLIOTHEQUE ---
+export const MOCK_LIBRARY_DOCUMENTS: LibraryDocument[] = [
+  {
+    id: 'doc-1',
+    titre: 'Code des Marchés Publics 2024',
+    categorie: DocumentCategory.REGLEMENTAIRE,
+    format: 'PDF',
+    date_upload: '2024-01-15',
+    url: '#',
+    description: 'Version consolidée du code des marchés en vigueur.',
+    auteur: 'MINMAP',
+    taille: '2.4 MB'
+  },
+  {
+    id: 'doc-2',
+    titre: 'Modèle de DAO - Travaux Routiers',
+    categorie: DocumentCategory.MODELES,
+    format: 'DOCX',
+    date_upload: '2024-02-10',
+    url: '#',
+    description: 'Gabarit standard pour les appels d\'offres de travaux.',
+    auteur: 'Cellule des Marchés',
+    taille: '540 KB'
+  },
+  {
+    id: 'doc-3',
+    titre: 'Rapport Annuel Performance 2023',
+    categorie: DocumentCategory.PERFORMANCE,
+    format: 'PPTX',
+    date_upload: '2024-03-05',
+    url: '#',
+    description: 'Présentation des indicateurs de performance de la passation.',
+    auteur: 'Direction Générale',
+    taille: '5.1 MB'
+  }
 ];
 
 export const MOCK_PROJETS: Projet[] = [
   {
-    id: 'EDC_2024',
-    libelle: 'Budget Propre EDC S.A.',
-    source_financement: SourceFinancement.BUDGET_EDC,
+    id: 'PROJ_001',
+    libelle: 'Projet Lom Pangar',
+    source_financement: SourceFinancement.BAILLEUR,
+    bailleur_nom: 'Banque Mondiale',
     exercice: 2024,
-    date_creation: '2024-01-10'
+    date_creation: '2023-12-01'
   },
   {
-    id: 'BM_2024',
-    libelle: 'Programme Banque Mondiale (P-123)',
-    source_financement: SourceFinancement.BAILLEUR,
-    bailleur_nom: 'BM',
+    id: 'PROJ_002',
+    libelle: 'Budget de Fonctionnement 2024',
+    source_financement: SourceFinancement.BUDGET_EDC,
     exercice: 2024,
-    date_creation: '2024-02-05'
+    date_creation: '2024-01-01'
+  },
+  {
+    id: 'PROJ_003',
+    libelle: 'Projet Memve\'ele',
+    source_financement: SourceFinancement.BAILLEUR,
+    bailleur_nom: 'BAD',
+    exercice: 2025,
+    date_creation: '2024-06-15'
   }
 ];
 
-const mockDoc = { nom: 'Document.pdf', url: '#', date_upload: '2024-05-01' };
-
 export const MOCK_MARCHES: Marche[] = [
   {
-    id: '001/EDC/2024',
-    objet: 'Maintenance turbines Memve\'ele',
-    fonction_parente: "Exploitation et maintenance",
-    activite_parente: 'Maintenance',
+    id: '001/AONO/EDC/2024',
+    objet: 'Fourniture de matériel informatique pour la Direction Générale',
+    fonction_parente: 'Direction Générale',
+    activite_parente: 'Renforcement des capacités',
     type_ao: 'AONO',
-    type_prestation: 'Services',
-    montant_prevu: 125000000,
+    type_prestation: 'Fournitures',
+    montant_prevu: 50000000,
     source_financement: SourceFinancement.BUDGET_EDC,
-    imputation_budgetaire: 'EXP-M01',
+    imputation_budgetaire: 'INV-2024-001',
     hors_ppm: false,
     statut_global: StatutGlobal.EN_COURS,
     exercice: 2024,
-    projet_id: 'EDC_2024',
-    delai_global_passation: 120,
+    projet_id: 'PROJ_002',
+    delai_global_passation: 90,
+    is_infructueux: false,
+    is_annule: false,
+    has_recours: false,
+    etat_avancement: 'En cours de consultation',
+    docs: {},
     dates_prevues: {
+      saisine_cipm: '2024-01-15',
+      examen_dao_cipm: '2024-01-25',
+      lancement_ao: '2024-02-05',
+      depouillement: '2024-03-05',
+      prop_attrib_cipm: '2024-03-20',
+      publication: '2024-04-01',
+      notification: '2024-04-15',
       saisine_cipm_prev: undefined,
-      saisine_cipm: '2024-03-01',
-      examen_dao_cipm: '2024-03-15',
       validation_dao: undefined,
       ano_bailleur_dao: undefined,
-      lancement_ao: '2024-04-01',
       additif: undefined,
-      depouillement: '2024-04-30',
       validation_eval_offres: undefined,
       ano_bailleur_eval: undefined,
       ouverture_financiere: undefined,
-      prop_attrib_cipm: '2024-05-10',
-      avis_conforme_ca: '2024-05-15',
-      ano_bailleur_attrib: undefined,
-      publication: '2024-05-20',
-      notification_attrib: undefined,
-      souscription_projet: '2024-06-01',
-      saisine_cipm_projet: '2024-06-10',
-      examen_projet_cipm: '2024-06-20',
-      validation_projet: undefined,
-      ano_bailleur_projet: undefined,
-      signature_marche: '2024-07-01',
-      notification: '2024-07-05'
-    },
-    dates_realisees: {
-      saisine_cipm_prev: '2024-02-25',
-      saisine_cipm: '2024-03-05',
-      examen_dao_cipm: '2024-03-20',
-      validation_dao: '2024-03-25',
-      ano_bailleur_dao: undefined,
-      lancement_ao: '2024-04-05',
-      additif: undefined,
-      depouillement: '2024-05-02',
-      validation_eval_offres: undefined,
-      ano_bailleur_eval: undefined,
-      ouverture_financiere: undefined,
-      prop_attrib_cipm: undefined,
       avis_conforme_ca: undefined,
       ano_bailleur_attrib: undefined,
-      publication: undefined,
       notification_attrib: undefined,
       souscription_projet: undefined,
       saisine_cipm_projet: undefined,
       examen_projet_cipm: undefined,
       validation_projet: undefined,
       ano_bailleur_projet: undefined,
-      signature_marche: undefined,
-      notification: undefined
+      signature_marche: undefined
     },
-    docs: {
-      dao: mockDoc,
-      imputation: mockDoc,
-      saisine: mockDoc,
-      validation_dao: mockDoc,
-      lancement: mockDoc,
-      depouillement: mockDoc
-    }, 
-    is_infructueux: false, 
-    
-    // Champs Annulation
-    is_annule: false,
-    motif_annulation: '',
-    
-    // Champs Recours
-    has_recours: false,
-    recours_issue: '',
-    recours: 'Néant', 
-    
-    etat_avancement: 'Examen DAO',
-
-    // --- NOUVEAU : Initialisation de l'objet Execution ---
+    dates_realisees: {
+      saisine_cipm: '2024-01-18',
+      examen_dao_cipm: '2024-01-30',
+      lancement_ao: '2024-02-10',
+      depouillement: undefined,
+      prop_attrib_cipm: undefined,
+      publication: undefined,
+      notification: undefined,
+      saisine_cipm_prev: undefined,
+      validation_dao: undefined,
+      ano_bailleur_dao: undefined,
+      additif: undefined,
+      validation_eval_offres: undefined,
+      ano_bailleur_eval: undefined,
+      ouverture_financiere: undefined,
+      avis_conforme_ca: undefined,
+      ano_bailleur_attrib: undefined,
+      notification_attrib: undefined,
+      souscription_projet: undefined,
+      saisine_cipm_projet: undefined,
+      examen_projet_cipm: undefined,
+      validation_projet: undefined,
+      ano_bailleur_projet: undefined,
+      signature_marche: undefined
+    },
     execution: {
       decomptes: [],
+      avenants: [],
       type_retenue_garantie: 'OPTION_A',
       has_avenant: false,
+      is_resilie: false
+    }
+  },
+  {
+    id: '002/AONI/EDC/2024',
+    objet: 'Travaux de réhabilitation de la route d\'accès au barrage',
+    fonction_parente: 'Direction Technique',
+    activite_parente: 'Maintenance Infrastructures',
+    type_ao: 'AONI',
+    type_prestation: 'Travaux',
+    montant_prevu: 250000000,
+    source_financement: SourceFinancement.BAILLEUR,
+    bailleur_nom: 'Banque Mondiale',
+    imputation_budgetaire: 'BM-LOM-2024-05',
+    hors_ppm: false,
+    statut_global: StatutGlobal.PLANIFIE,
+    exercice: 2024,
+    projet_id: 'PROJ_001',
+    delai_global_passation: 120,
+    is_infructueux: false,
+    is_annule: false,
+    has_recours: false,
+    etat_avancement: 'Planifié',
+    docs: {},
+    dates_prevues: {
+      saisine_cipm: '2024-03-01',
+      examen_dao_cipm: '2024-03-15',
+      ano_bailleur_dao: '2024-04-01',
+      lancement_ao: '2024-04-15',
+      depouillement: '2024-05-15',
+      prop_attrib_cipm: '2024-06-01',
+      ano_bailleur_attrib: '2024-06-15',
+      publication: '2024-06-20',
+      notification: '2024-07-01',
+      saisine_cipm_prev: undefined,
+      validation_dao: undefined,
+      additif: undefined,
+      validation_eval_offres: undefined,
+      ano_bailleur_eval: undefined,
+      ouverture_financiere: undefined,
+      avis_conforme_ca: undefined,
+      notification_attrib: undefined,
+      souscription_projet: undefined,
+      saisine_cipm_projet: undefined,
+      examen_projet_cipm: undefined,
+      validation_projet: undefined,
+      ano_bailleur_projet: undefined,
+      signature_marche: undefined
+    },
+    dates_realisees: {
+      saisine_cipm_prev: undefined, saisine_cipm: undefined, examen_dao_cipm: undefined, validation_dao: undefined,
+      ano_bailleur_dao: undefined, lancement_ao: undefined, additif: undefined, depouillement: undefined,
+      validation_eval_offres: undefined, ano_bailleur_eval: undefined, ouverture_financiere: undefined,
+      prop_attrib_cipm: undefined, avis_conforme_ca: undefined, ano_bailleur_attrib: undefined, publication: undefined,
+      notification_attrib: undefined, souscription_projet: undefined, saisine_cipm_projet: undefined,
+      examen_projet_cipm: undefined, validation_projet: undefined, ano_bailleur_projet: undefined,
+      signature_marche: undefined, notification: undefined
+    },
+    execution: {
+      decomptes: [],
       avenants: [],
+      type_retenue_garantie: 'OPTION_A',
+      has_avenant: false,
       is_resilie: false
     }
   }
 ];
 
-export const MOCK_LIBRARY_DOCUMENTS: LibraryDocument[] = [
-  {
-    id: '1',
-    titre: 'Code des Marchés Publics Cameroun',
-    categorie: DocumentCategory.REGLEMENTAIRE,
-    format: 'PDF',
-    date_upload: '2023-01-15',
-    url: '#',
-    description: 'Version consolidée du Code des Marchés Publics applicable aux entreprises publiques.',
-    auteur: 'MINMAP',
-    taille: '1.2 MB'
-  },
-  {
-    id: '2',
-    titre: 'Modèle de Dossier d\'Appel d\'Offres - Travaux',
-    categorie: DocumentCategory.MODELES,
-    format: 'DOCX',
-    date_upload: '2023-06-10',
-    url: '#',
-    description: 'Template standard pour la rédaction des DAO de travaux.',
-    auteur: 'EDC Passation',
-    taille: '450 KB'
-  },
-  {
-    id: '3',
-    titre: 'Rapport d\'Audit de Performance 2023',
-    categorie: DocumentCategory.AUDITS,
-    format: 'PDF',
-    date_upload: '2024-02-01',
-    url: '#',
-    description: 'Audit annuel de la performance des marchés et de la célérité des procédures.',
-    auteur: 'KPMG',
-    taille: '3.5 MB'
-  }
-];
-
-export const formatFCFA = (amount: number) => {
-  return new Intl.NumberFormat('fr-CM', { style: 'currency', currency: 'XAF', maximumFractionDigits: 0 }).format(amount);
+export const formatFCFA = (amount?: number) => {
+  if (amount === undefined || amount === null) return '-';
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XAF', maximumFractionDigits: 0 }).format(amount);
 };
 
-export const calculateDaysBetween = (start?: string, end?: string): number | null => {
-  if (!start || !end) return null;
-  const s = new Date(start);
-  const e = new Date(end);
-  return Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24));
+export const calculateDaysBetween = (d1?: string, d2?: string) => {
+  if (!d1 || !d2) return null;
+  const start = new Date(d1);
+  const end = new Date(d2);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 };

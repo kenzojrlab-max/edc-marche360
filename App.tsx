@@ -15,17 +15,22 @@ import {
   ShieldCheck,
   Activity,
   Layers,
-  FileText // <--- Nouvel icône pour le menu admin
+  FileText 
 } from 'lucide-react';
+
+// --- IMPORTS DES PAGES ---
 import Dashboard from './pages/Dashboard';
 import MarketList from './pages/MarketList';
 import MarketDetail from './pages/MarketDetail';
 import TrackingPage from './pages/TrackingPage';
-import ExecutionPage from './pages/ExecutionPage.tsx';
+import ExecutionPage from './pages/ExecutionPage'; // Assurez-vous que l'extension est .tsx
 import DocumentLibrary from './pages/DocumentLibrary';
 import SettingsPage from './pages/Settings';
-import { CURRENT_USER } from './services/mockData';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+
 import { UserRole } from './types';
+import { useMarkets } from './contexts/MarketContext';
 
 // --- Components ---
 
@@ -45,10 +50,27 @@ const SidebarItem = ({ to, icon: Icon, label, active }: { to: string, icon: any,
 
 const Layout = ({ children }: { children?: React.ReactNode }) => {
   const location = useLocation();
+  const { currentUser, logout } = useMarkets(); 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedYear, setSelectedYear] = useState('2024');
 
-  const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
+  // Si on est sur la page de Login ou Inscription, on affiche le contenu SANS sidebar
+  const isPublicPage = location.pathname === '/login' || location.pathname === '/register';
+  
+  if (isPublicPage) {
+      return <div className="bg-slate-50 min-h-screen w-full">{children}</div>;
+  }
+
+  // --- CORRECTION CRITIQUE : Suppression du bloc qui retournait null ---
+  // On laisse le rendu se poursuivre même si !currentUser.
+  // C'est ProtectedRoute qui gèrera la redirection.
+  
+  // Si pas connecté, on ne rend que les enfants (qui déclencheront la redirection), sans le layout inutile
+  if (!currentUser) {
+      return <>{children}</>;
+  }
+
+  const isAdmin = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUPER_ADMIN;
 
   useEffect(() => {
     const handleResize = () => {
@@ -82,52 +104,40 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Utilisateur</p>
             <div className="flex items-center">
               <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs mr-2">
-                {CURRENT_USER.nom_complet.substring(0, 2).toUpperCase()}
+                {currentUser.nom_complet.substring(0, 2).toUpperCase()}
               </div>
               <div className="overflow-hidden">
-                <p className="text-sm font-medium text-slate-700 truncate">{CURRENT_USER.nom_complet}</p>
-                <p className="text-xs text-slate-500 truncate">{CURRENT_USER.role}</p>
+                <p className="text-sm font-medium text-slate-700 truncate">{currentUser.nom_complet}</p>
+                <p className="text-xs text-slate-500 truncate">{currentUser.role}</p>
               </div>
             </div>
           </div>
 
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {/* 1. Dashboard */}
             <SidebarItem to="/" icon={LayoutDashboard} label="Tableau de Bord" active={location.pathname === '/'} />
-            
-            {/* 2. Plan de Passation */}
             <SidebarItem to="/ppm-view" icon={ClipboardList} label="Plan de Passation" active={location.pathname === '/ppm-view'} />
-            
-            {/* 3. Documentation (Menu Utilisateur) */}
             <SidebarItem to="/documents" icon={BookOpen} label="Documentation" active={location.pathname === '/documents'} />
             
-            {/* SECTION ADMINISTRATION */}
             <div className="pt-6 pb-2">
               <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Administration</p>
             </div>
             
-            {/* 4a. Gestion PPM */}
             {isAdmin && (
               <SidebarItem to="/ppm-manage" icon={ShieldCheck} label="Gestion PPM" active={location.pathname === '/ppm-manage'} />
             )}
 
-            {/* 4b. Suivi des marchés */}
             <SidebarItem to="/tracking" icon={Activity} label="Suivi des marchés" active={location.pathname === '/tracking'} />
-
-            {/* 4c. Exécution des marchés */}
             <SidebarItem to="/execution" icon={Layers} label="Exécution des marchés" active={location.pathname === '/execution'} />
             
-            {/* 4d. Gestion Documentaire (NOUVEAU - Menu Admin) */}
             {isAdmin && (
               <SidebarItem to="/documents-manage" icon={FileText} label="Gestion Documentaire" active={location.pathname === '/documents-manage'} />
             )}
             
-            {/* 4e. Paramètres */}
             <SidebarItem to="/settings" icon={Settings} label="Paramètres" active={location.pathname === '/settings'} />
           </nav>
 
           <div className="p-4 border-t border-slate-100">
-            <button className="flex items-center space-x-3 w-full px-4 py-2 text-slate-500 hover:text-danger hover:bg-red-50 rounded-2xl transition-colors">
+            <button onClick={logout} className="flex items-center space-x-3 w-full px-4 py-2 text-slate-500 hover:text-danger hover:bg-red-50 rounded-2xl transition-colors">
               <LogOut size={18} />
               <span className="text-sm font-medium">Déconnexion</span>
             </button>
@@ -172,23 +182,39 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   );
 };
 
+// --- PROTECTION DES ROUTES ---
+const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
+  const { currentUser } = useMarkets();
+  
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+// --- APPLICATION ---
 function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/ppm-view" element={<MarketList mode="PPM" readOnly={true} />} />
-        <Route path="/ppm-manage" element={<MarketList mode="PPM" readOnly={false} />} />
-        <Route path="/tracking" element={<TrackingPage />} />
-        <Route path="/execution" element={<ExecutionPage />} />
-        <Route path="/markets/:id" element={<MarketDetail />} />
-        
-        {/* --- ROUTES DOCUMENTATION --- */}
-        <Route path="/documents" element={<DocumentLibrary readOnly={true} />} />
-        <Route path="/documents-manage" element={<DocumentLibrary readOnly={false} />} />
+        {/* Routes Publiques */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/analytics" element={<Dashboard />} />
+        {/* Routes Protégées */}
+        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/ppm-view" element={<ProtectedRoute><MarketList mode="PPM" readOnly={true} /></ProtectedRoute>} />
+        <Route path="/ppm-manage" element={<ProtectedRoute><MarketList mode="PPM" readOnly={false} /></ProtectedRoute>} />
+        <Route path="/tracking" element={<ProtectedRoute><TrackingPage /></ProtectedRoute>} />
+        <Route path="/execution" element={<ProtectedRoute><ExecutionPage /></ProtectedRoute>} />
+        <Route path="/markets/:id" element={<ProtectedRoute><MarketDetail /></ProtectedRoute>} />
+        
+        <Route path="/documents" element={<ProtectedRoute><DocumentLibrary readOnly={true} /></ProtectedRoute>} />
+        <Route path="/documents-manage" element={<ProtectedRoute><DocumentLibrary readOnly={false} /></ProtectedRoute>} />
+
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
