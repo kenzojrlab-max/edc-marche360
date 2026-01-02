@@ -1,6 +1,6 @@
 // components/CommonComponents.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom'; // IMPORT CRUCIAL
+import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 
 interface SelectOption {
@@ -35,15 +35,18 @@ export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({
       const spaceBelow = window.innerHeight - rect.bottom;
       
       // Décision intelligente : Haut ou Bas ?
-      const showAbove = spaceBelow < 200; // Si moins de 200px en bas, on affiche en haut
+      const showAbove = spaceBelow < 300; // Augmenté pour plus de confort
 
       setDropdownStyle({
-        position: 'fixed', // On utilise fixed pour sortir du contexte du tableau
+        position: 'fixed',
         left: `${rect.left}px`,
-        width: `${rect.width}px`,
+        // CORRECTION MAJEURE ICI :
+        minWidth: `${rect.width}px`, // Largeur minimale = largeur du bouton
+        width: 'max-content',        // S'adapte au contenu (textes longs)
+        maxWidth: '90vw',            // Sécurité pour ne pas dépasser l'écran
         top: showAbove ? 'auto' : `${rect.bottom + 5}px`,
         bottom: showAbove ? `${window.innerHeight - rect.top + 5}px` : 'auto',
-        zIndex: 99999, // Très haut pour passer au-dessus de tout
+        zIndex: 99999,
       });
     }
   };
@@ -51,7 +54,6 @@ export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({
   useEffect(() => {
     if (isOpen) {
       updatePosition();
-      // On met à jour la position si on scroll ou redimensionne
       window.addEventListener('scroll', updatePosition, true);
       window.addEventListener('resize', updatePosition);
     }
@@ -76,23 +78,23 @@ export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({
   const dropdownMenu = (
     <div 
       style={dropdownStyle}
-      className="bg-white border border-slate-200 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] p-2 max-h-64 overflow-y-auto animate-in fade-in duration-200"
+      className="bg-white border border-slate-200 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] p-2 max-h-80 overflow-y-auto animate-in fade-in duration-200 custom-scrollbar"
     >
       {options.map((opt) => (
         <div 
           key={opt.value} 
-          onMouseDown={(e) => { // onMouseDown pour éviter conflit avec le blur
+          onMouseDown={(e) => {
             e.preventDefault();
             onChange({ target: { value: opt.value } }); 
             setIsOpen(false); 
           }} 
-          className={`group flex items-center justify-between px-4 py-3 my-0.5 text-xs font-black rounded-xl cursor-pointer transition-all ${
+          className={`group flex items-center justify-between px-4 py-3 my-0.5 text-xs font-black rounded-xl cursor-pointer transition-all whitespace-nowrap ${
             value === opt.value 
               ? 'bg-primary text-white shadow-md' 
               : 'text-slate-700 hover:bg-slate-50 hover:text-primary'
           }`}
         >
-          <span className="truncate pr-2 uppercase">{opt.label}</span>
+          <span className="uppercase mr-4">{opt.label}</span>
           {value === opt.value && <Check size={14} className="flex-shrink-0" />}
         </div>
       ))}
@@ -107,19 +109,18 @@ export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({
       >
         <div 
           onClick={() => !disabled && setIsOpen(!isOpen)} 
-          className="w-full flex items-center justify-between cursor-pointer select-none bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm hover:border-primary/50 transition-colors"
+          className="w-full flex items-center justify-between cursor-pointer select-none bg-white border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm hover:border-primary/50 transition-colors"
         >
-          <span className={`truncate text-[10px] font-black ${!selected ? 'text-slate-400' : 'text-slate-800'}`}>
+          <span className={`truncate text-[10px] font-black uppercase ${!selected ? 'text-slate-400' : 'text-slate-800'}`}>
             {selected ? selected.label : placeholder}
           </span>
           <ChevronDown 
             size={14} 
-            className={`text-slate-400 transition-transform flex-shrink-0 ml-1 ${isOpen ? 'rotate-180' : ''}`} 
+            className={`text-slate-400 transition-transform flex-shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`} 
           />
         </div>
       </div>
       
-      {/* Le menu est rendu hors du tableau via Portal */}
       {isOpen && createPortal(dropdownMenu, document.body)}
     </>
   );
