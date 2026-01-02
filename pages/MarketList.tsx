@@ -322,7 +322,6 @@ interface MarketListProps {
 }
 
 const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
-  // RECUPERATION DU CONTEXTE GLOBAL (ETAT)
   const { 
     marches, updateMarche, addMarche, projets, addProjet, updateProjet, fonctions,
     selectedYear, setSelectedYear, selectedProjetId, setSelectedProjetId
@@ -330,12 +329,9 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
   
   const [searchParams] = useSearchParams();
 
-  // On supprime les états locaux (useState) pour l'année et le projet, on utilise ceux du contexte
-  // const [selectedYear, setSelectedYear] = useState(2024); <-- SUPPRIMÉ
-  // const [selectedProjetId, setSelectedProjetId] = useState<string | null>(null); <-- SUPPRIMÉ
-
-  const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
+  // On supprime les états locaux, on utilise ceux du contexte
   
+  const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'PASSATION' | 'EXECUTION'>('PASSATION');
   const [viewModal, setViewModal] = useState<{ type: 'DECOMPTES' | 'AVENANTS' | 'RESILIATION', market: Marche } | null>(null);
 
@@ -376,6 +372,9 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
   useEffect(() => {
     setActiveTab('PASSATION');
   }, [expandedMarketId]);
+
+  // Liste dynamique des projets disponibles pour l'année sélectionnée
+  const availableProjects = projets.filter(p => p.exercice === selectedYear);
 
   const handleDocUpload = (marketId: string, docKey: string, file?: File, isSpecialDoc?: boolean) => {
     const targetMarket = marches.find(m => m.id === marketId);
@@ -622,9 +621,11 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
           <h1 className="text-3xl font-black text-slate-800 tracking-tight uppercase">
             {readOnly ? 'Plan de Passation des Marchés' : (mode === 'PPM' ? 'Gestion de la Programmation' : 'Suivi des Marchés')}
           </h1>
-          <div className="flex items-center gap-4 mt-2">
-             <div className="w-32 bg-white rounded-2xl shadow-sm border border-slate-200">
-               {/* UTILISATION DU COMPOSANT CUSTOM AVEC LE CONTEXTE GLOBAL */}
+          
+          {/* CORRECTION ICI : ZONE DES FILTRES UNIFORMISÉE AVEC TRACKINGPAGE */}
+          <div className="flex flex-col md:flex-row items-center gap-3 flex-wrap mt-2">
+             {/* SÉLECTEUR ANNÉE */}
+             <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm whitespace-nowrap min-w-[120px]">
                <CustomBulleSelect 
                   value={selectedYear.toString()} 
                   onChange={(e: any) => setSelectedYear(parseInt(e.target.value))} 
@@ -632,8 +633,22 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                   placeholder="Année"
                />
              </div>
+
+             {/* SÉLECTEUR PROJET (NOUVEAU DANS CET ÉCRAN) */}
+             <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm min-w-[200px] max-w-xs">
+                <CustomBulleSelect 
+                  value={selectedProjetId} 
+                  onChange={(e: any) => setSelectedProjetId(e.target.value)} 
+                  options={[
+                    { value: '', label: 'Tous les Projets' },
+                    ...availableProjects.map(p => ({ value: p.id, label: p.libelle }))
+                  ]}
+                  placeholder="Tous les Projets"
+                />
+             </div>
+
              {readOnly && (
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest italic flex items-center gap-2 animate-pulse">
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest italic flex items-center gap-2 animate-pulse ml-2">
                   <Info size={14} className="text-primary" /> Double-cliquez pour accéder au téléchargement
                 </p>
              )}
@@ -646,35 +661,37 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
         )}
       </div>
 
-      {/* Liste Projets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projetsDeAnnee.length > 0 ? projetsDeAnnee.map(p => (
-          <div key={p.id} onClick={() => setSelectedProjetId(p.id)} className={`cursor-pointer p-8 rounded-[3rem] border-2 transition-all flex flex-col justify-between h-48 shadow-sm hover:shadow-xl group ${selectedProjetId === p.id ? 'bg-primary border-primary text-white scale-105 shadow-primary/30' : 'bg-white border-slate-100 text-slate-700 hover:border-primary/20'}`}>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${selectedProjetId === p.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                  {p.source_financement === SourceFinancement.BAILLEUR ? `BAILLEUR (${p.bailleur_nom})` : 'BUDGET EDC'}
-                </span>
-                <Layers size={18} className={selectedProjetId === p.id ? 'text-white/40' : 'text-slate-200 group-hover:text-primary/40'} />
+      {/* Liste Projets (Grille) - Affichée si aucun projet spécifique sélectionné */}
+      {!selectedProjetId && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projetsDeAnnee.length > 0 ? projetsDeAnnee.map(p => (
+            <div key={p.id} onClick={() => setSelectedProjetId(p.id)} className={`cursor-pointer p-8 rounded-[3rem] border-2 transition-all flex flex-col justify-between h-48 shadow-sm hover:shadow-xl group ${selectedProjetId === p.id ? 'bg-primary border-primary text-white scale-105 shadow-primary/30' : 'bg-white border-slate-100 text-slate-700 hover:border-primary/20'}`}>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${selectedProjetId === p.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                    {p.source_financement === SourceFinancement.BAILLEUR ? `BAILLEUR (${p.bailleur_nom})` : 'BUDGET EDC'}
+                  </span>
+                  <Layers size={18} className={selectedProjetId === p.id ? 'text-white/40' : 'text-slate-200 group-hover:text-primary/40'} />
+                </div>
+                <h3 className="text-base font-black uppercase leading-tight">{p.libelle}</h3>
               </div>
-              <h3 className="text-base font-black uppercase leading-tight">{p.libelle}</h3>
-            </div>
-            <div className="flex items-center justify-between pt-4">
-              <span className="text-[9px] font-black uppercase tracking-tighter opacity-60">Projet #{p.id.split('_').pop()}</span>
-              <div className={`p-2 rounded-full ${selectedProjetId === p.id ? 'bg-white text-primary shadow-lg' : 'bg-slate-50 text-slate-300'}`}>
-                <ArrowRight size={14} />
+              <div className="flex items-center justify-between pt-4">
+                <span className="text-[9px] font-black uppercase tracking-tighter opacity-60">Projet #{p.id.split('_').pop()}</span>
+                <div className={`p-2 rounded-full ${selectedProjetId === p.id ? 'bg-white text-primary shadow-lg' : 'bg-slate-50 text-slate-300'}`}>
+                  <ArrowRight size={14} />
+                </div>
               </div>
             </div>
-          </div>
-        )) : (
-          <div className="col-span-full py-20 bg-slate-50 rounded-[3rem] border-4 border-dashed border-slate-200 text-center">
-            <Layers size={48} className="mx-auto text-slate-200 mb-4" />
-            <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Aucun projet initialisé pour {selectedYear}</p>
-          </div>
-        )}
-      </div>
+          )) : (
+            <div className="col-span-full py-20 bg-slate-50 rounded-[3rem] border-4 border-dashed border-slate-200 text-center">
+              <Layers size={48} className="mx-auto text-slate-200 mb-4" />
+              <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Aucun projet initialisé pour {selectedYear}</p>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Détails du Projet */}
+      {/* Détails du Projet - Affiché si un projet est sélectionné */}
       {selectedProjetId && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between border-t-2 border-slate-100 pt-8 gap-4">
