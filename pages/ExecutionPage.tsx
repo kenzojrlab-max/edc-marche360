@@ -5,9 +5,10 @@ import {
   Plus, Trash2, CheckCircle2, AlertOctagon, X, Save, Layers, Flag
 } from 'lucide-react';
 import { useMarkets } from '../contexts/MarketContext';
-// CORRECTION : On retire MOCK_PROJETS des imports
 import { formatFCFA } from '../services/mockData';
 import { Marche, Decompte, Avenant } from '../types';
+// IMPORT DU COMPOSANT CUSTOM
+import { CustomBulleSelect } from '../components/CommonComponents';
 
 // --- Composant Bouton Upload Simple ---
 const UploadBtn = ({ label, hasDoc, url, onUpload, color = "blue" }: any) => {
@@ -74,7 +75,7 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
     updateExec('decomptes', updated);
   };
 
-  // --- GESTION AVENANTS (CORRIGÉ) ---
+  // --- GESTION AVENANTS ---
   const addAvenant = () => {
     const newAv: Avenant = { id: Date.now().toString(), ref: '', objet: '', montant_inc_dec: 0, date_signature: '' };
     updateExec('avenants', [...localMarket.execution.avenants, newAv]);
@@ -85,12 +86,10 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
     updateExec('avenants', updated);
   };
 
-  // NOUVELLE FONCTION AJOUTÉE POUR LES DOCS AVENANTS
   const uploadAvenantDoc = (id: string, docField: string, file: File) => {
     const url = URL.createObjectURL(file);
     const doc = { nom: file.name, url, date_upload: new Date().toISOString().split('T')[0] };
     
-    // On parcourt la liste des avenants pour trouver celui qui correspond à l'ID
     const updated = localMarket.execution.avenants.map(a => 
       a.id === id ? { ...a, [docField]: doc } : a
     );
@@ -319,7 +318,6 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
                             <td className="p-2"><input type="text" className="w-full bg-slate-100 rounded px-1" value={a.objet} onChange={e => updateAvenant(a.id, 'objet', e.target.value)} /></td>
                             <td className="p-2"><input type="number" className="w-24 bg-slate-100 rounded px-1 font-mono" value={a.montant_inc_dec} onChange={e => updateAvenant(a.id, 'montant_inc_dec', parseInt(e.target.value))} /></td>
                             
-                            {/* ICI : UTILISATION DE LA NOUVELLE FONCTION POUR UPLOAD */}
                             <td className="p-2">
                                 <UploadBtn 
                                   label="Notif" 
@@ -402,22 +400,12 @@ const ExecutionModal = ({ market, onClose }: { market: Marche, onClose: () => vo
 
 // --- PAGE PRINCIPALE : LISTE DES MARCHÉS POUR EXÉCUTION ---
 const ExecutionPage: React.FC = () => {
-  // CORRECTION ICI : Récupération des 'projets' du contexte global
-  const { marches, projets } = useMarkets();
+  const { marches, projets, selectedYear, setSelectedYear, selectedProjetId, setSelectedProjetId } = useMarkets();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMarket, setSelectedMarket] = useState<Marche | null>(null);
 
-  // --- NOUVEAUX ÉTATS POUR LE FILTRAGE ---
-  const [selectedYear, setSelectedYear] = useState<number>(2024);
-  const [selectedProjetId, setSelectedProjetId] = useState<string>('');
-
-  // CORRECTION ICI : Liste dynamique des projets disponibles pour l'année sélectionnée
+  // Liste dynamique des projets disponibles pour l'année sélectionnée
   const availableProjects = projets.filter(p => p.exercice === selectedYear);
-
-  // Reset du projet si l'année change
-  useEffect(() => {
-    setSelectedProjetId('');
-  }, [selectedYear]);
 
   // Filtre
   const executionCandidates = marches.filter(m => 
@@ -439,34 +427,34 @@ const ExecutionPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center gap-3">
+        {/* CONTENEUR DES FILTRES - CORRIGÉ AVEC FLEX-WRAP */}
+        <div className="flex flex-col md:flex-row items-center gap-3 flex-wrap">
           
-          {/* SÉLECTEUR ANNÉE */}
-          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm">
-             <span className="text-[9px] font-black text-slate-400 uppercase">Exercice</span>
-             <select 
-                value={selectedYear} 
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer"
-             >
-               <option value={2024}>2024</option>
-               <option value={2025}>2025</option>
-             </select>
+          {/* SÉLECTEUR ANNÉE - CUSTOM */}
+          <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm whitespace-nowrap min-w-[120px]">
+             <CustomBulleSelect 
+               value={selectedYear.toString()} 
+               onChange={(e: any) => setSelectedYear(parseInt(e.target.value))}
+               options={[
+                 { value: '2024', label: '2024' },
+                 { value: '2025', label: '2025' },
+                 { value: '2026', label: '2026' }
+               ]}
+               placeholder="Année"
+             />
           </div>
 
-          {/* SÉLECTEUR PROJET */}
-          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm min-w-[200px]">
-             <Layers size={14} className="text-slate-400" />
-             <select 
-                value={selectedProjetId} 
-                onChange={(e) => setSelectedProjetId(e.target.value)}
-                className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer w-full truncate"
-             >
-               <option value="">Tous les Projets</option>
-               {availableProjects.map(p => (
-                 <option key={p.id} value={p.id}>{p.libelle}</option>
-               ))}
-             </select>
+          {/* SÉLECTEUR PROJET - CUSTOM */}
+          <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm min-w-[200px] max-w-xs">
+             <CustomBulleSelect 
+               value={selectedProjetId} 
+               onChange={(e: any) => setSelectedProjetId(e.target.value)}
+               options={[
+                 { value: '', label: 'Tous les Projets' },
+                 ...availableProjects.map(p => ({ value: p.id, label: p.libelle }))
+               ]}
+               placeholder="Tous les Projets"
+             />
           </div>
 
           <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>

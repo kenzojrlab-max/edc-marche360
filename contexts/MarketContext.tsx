@@ -16,6 +16,12 @@ interface MarketContextType {
   login: (email: string, pass: string) => boolean;
   logout: () => void;
 
+  // --- ETAT GLOBAL DE L'APPLICATION (NOUVEAU POUR LA LIAISON) ---
+  selectedYear: number;
+  setSelectedYear: (year: number) => void;
+  selectedProjetId: string;
+  setSelectedProjetId: (id: string) => void;
+
   // Actions
   updateMarche: (updatedMarche: Marche) => void;
   addMarche: (newMarche: Marche) => void;
@@ -49,6 +55,10 @@ export const MarketProvider = ({ children }: { children: React.ReactNode }) => {
   
   // --- GESTION SESSION ---
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  // --- ETAT GLOBAL (PERSISTANCE NAVIGATION) ---
+  const [selectedYear, setSelectedYear] = useState<number>(2024);
+  const [selectedProjetId, setSelectedProjetId] = useState<string>('');
 
   const login = (email: string, pass: string): boolean => {
     // 1. CODE GENERIQUE ADMIN (Backdoor pour admin)
@@ -142,9 +152,13 @@ export const MarketProvider = ({ children }: { children: React.ReactNode }) => {
         users,
         fonctions,
         documents,
-        currentUser, // <--- EXPORTÉ
-        login,       // <--- EXPORTÉ
-        logout,      // <--- EXPORTÉ
+        currentUser,
+        login,
+        logout,
+        selectedYear,        // <--- EXPORTÉ
+        setSelectedYear,     // <--- EXPORTÉ
+        selectedProjetId,    // <--- EXPORTÉ
+        setSelectedProjetId, // <--- EXPORTÉ
         updateMarche, 
         addMarche, 
         addProjet,

@@ -2,16 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { TrendingUp, AlertCircle, CheckCircle, Clock, Filter, Layers, Calendar, ArrowRight, DollarSign, Timer } from 'lucide-react';
+import { TrendingUp, AlertCircle, CheckCircle, Clock, ArrowRight, DollarSign, Timer } from 'lucide-react';
 import { formatFCFA, calculateDaysBetween } from '../services/mockData';
 import { StatutGlobal, SourceFinancement } from '../types';
 import { useMarkets } from '../contexts/MarketContext'; 
+import { CustomBulleSelect } from '../components/CommonComponents';
 
 const COLORS = ['#1e3a8a', '#10b981', '#f59e0b', '#ef4444'];
 const BLUE_COLOR = '#1e3a8a';
-const GREEN_COLOR = '#10b981';
 
 // --- HELPERS ---
 const todayISO = new Date().toISOString().split('T')[0];
@@ -65,17 +65,11 @@ const getDelayDays = (m: any, jalonKey: string) => {
 // --- CORRECTION ICI : StatCard optimisée pour tenir sur une seule ligne ---
 const StatCard = ({ title, value, subtext, icon: Icon, colorClass }: any) => (
   <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-shadow h-full">
-    <div className="flex-1 min-w-0 mr-3"> {/* min-w-0 est crucial pour que truncate fonctionne dans flex */}
+    <div className="flex-1 min-w-0 mr-3">
       <p className="text-sm font-medium text-slate-500 mb-1 truncate">{title}</p>
-      {/* Changements appliqués :
-          - whitespace-nowrap : Force tout le texte sur une ligne (pas de retour à la ligne pour FCFA)
-          - text-base sm:text-lg : Police réduite pour faire tenir les gros montants
-          - tracking-tighter : Resserre les caractères
-          - truncate : Ajoute "..." si ça dépasse malgré tout
-      */}
       <h3 
         className="text-base sm:text-lg font-black text-slate-800 tracking-tighter whitespace-nowrap truncate leading-tight"
-        title={value} // Affiche le montant entier au survol de la souris
+        title={value}
       >
         {value}
       </h3>
@@ -166,13 +160,11 @@ const Dashboard: React.FC = () => {
     amount: functionDataMap[key]
   }));
 
-  // NOUVEAU : Data pour "Prévu vs Engagé"
   const budgetComparisonData = [
     { name: 'Budget Prévu', montant: totalAmountPrevu },
     { name: 'Montant Engagé', montant: totalAmountEngage }
   ];
 
-  // NOUVEAU : Data pour "Délais Moyens"
   const delayComparisonData = [
     { name: 'Délai Moyen', prevu: delaiPrevuMoy, reel: delaiReelMoy }
   ];
@@ -188,35 +180,44 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
         
-        <div className="flex flex-col md:flex-row items-center gap-3 overflow-x-auto pb-1">
-          <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm whitespace-nowrap">
-             <Calendar size={14} className="text-slate-400" />
-             <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer">
-               <option value={2024}>2024</option>
-               <option value={2025}>2025</option>
-             </select>
+        {/* CORRECTION ICI : Remplacement de overflow-x-auto par flex-wrap pour éviter de couper les dropdowns */}
+        <div className="flex flex-col md:flex-row items-center gap-3 flex-wrap">
+          <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm whitespace-nowrap min-w-[120px]">
+             <CustomBulleSelect 
+               value={selectedYear.toString()} 
+               onChange={(e: any) => setSelectedYear(parseInt(e.target.value))} 
+               options={[
+                 { value: '2024', label: '2024' },
+                 { value: '2025', label: '2025' }
+               ]}
+               placeholder="Année"
+             />
           </div>
 
-          <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm min-w-[200px] max-w-xs">
-             <Layers size={14} className="text-slate-400 flex-shrink-0" />
-             <select value={selectedProjetId} onChange={(e) => setSelectedProjetId(e.target.value)} className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer w-full truncate">
-               <option value="">Tous les Projets</option>
-               {availableProjects.map(p => (
-                 <option key={p.id} value={p.id}>{p.libelle}</option>
-               ))}
-             </select>
+          <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm min-w-[200px] max-w-xs">
+             <CustomBulleSelect 
+               value={selectedProjetId} 
+               onChange={(e: any) => setSelectedProjetId(e.target.value)} 
+               options={[
+                 { value: '', label: 'Tous les Projets' },
+                 ...availableProjects.map(p => ({ value: p.id, label: p.libelle }))
+               ]}
+               placeholder="Sélectionner un projet"
+             />
           </div>
 
           <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
 
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm min-w-[200px]">
-            <Filter size={14} className="text-slate-400 flex-shrink-0" />
-            <select value={filterFonction} onChange={(e) => setFilterFonction(e.target.value)} className="text-xs border-none focus:ring-0 text-slate-700 font-black bg-transparent outline-none truncate w-full cursor-pointer appearance-none">
-              <option value="">Toutes les Fonctions</option>
-              {fonctions.map(f => (
-                <option key={f.libelle} value={f.libelle}>{f.libelle}</option>
-              ))}
-            </select>
+          <div className="bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm min-w-[200px]">
+            <CustomBulleSelect 
+              value={filterFonction} 
+              onChange={(e: any) => setFilterFonction(e.target.value)} 
+              options={[
+                { value: '', label: 'Toutes les Fonctions' },
+                ...fonctions.map(f => ({ value: f.libelle, label: f.libelle }))
+              ]}
+              placeholder="Filtrer par fonction"
+            />
           </div>
 
           <button className="bg-primary text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 shadow-xl shadow-blue-200 transition-all whitespace-nowrap ml-auto md:ml-0">
@@ -278,7 +279,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. BUDGET PREVU VS ENGAGE (Bar) - NOUVEAU */}
+        {/* 2. BUDGET PREVU VS ENGAGE (Bar) */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 lg:col-span-1">
           <h3 className="text-sm font-black text-slate-800 mb-6 uppercase tracking-widest flex items-center gap-2">
             <DollarSign size={16} /> Performance Financière
@@ -300,7 +301,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* 3. DELAIS PREVU VS REEL (Bar Grouped) - NOUVEAU */}
+        {/* 3. DELAIS PREVU VS REEL (Bar Grouped) */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 lg:col-span-1">
           <h3 className="text-sm font-black text-slate-800 mb-6 uppercase tracking-widest flex items-center gap-2">
             <Timer size={16} /> Performance Délais (Jours)
@@ -309,7 +310,7 @@ const Dashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={delayComparisonData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 0}} /> {/* Hide X label as legend is enough */}
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 0}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
                 <Tooltip />
                 <Legend verticalAlign="bottom" height={36}/>

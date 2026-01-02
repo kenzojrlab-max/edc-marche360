@@ -1,6 +1,6 @@
 // pages/MarketList.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom'; // AJOUT : Import useSearchParams
+import { Link, useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { 
   Search, Download, Filter, Clock, Calendar, 
@@ -11,6 +11,8 @@ import {
 import { formatFCFA, calculateDaysBetween } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, StatutGlobal, Marche, Projet } from '../types';
 import { useMarkets } from '../contexts/MarketContext'; 
+// IMPORT DU COMPOSANT CORRIGÉ
+import { CustomBulleSelect } from '../components/CommonComponents';
 
 // --- DATE DU JOUR POUR LES ALERTES ---
 const today = new Date().toISOString().split('T')[0];
@@ -296,33 +298,7 @@ const ReadOnlyValue = ({ value, isDate = false, isAmount = false }: { value?: an
   </span>
 );
 
-const CustomBulleSelect = ({ value, onChange, options, placeholder, disabled }: any) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const selected = options.find((o: any) => o.value === value);
-
-  return (
-    <div className={`relative w-full ${disabled ? 'pointer-events-none' : ''}`} ref={containerRef}>
-      <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-transparent border-none outline-none flex items-center justify-between cursor-pointer">
-        <span className={`truncate text-[11px] font-black ${!selected ? 'text-slate-300' : 'text-slate-700'}`}>{selected ? selected.label : placeholder}</span>
-        <ChevronDown size={14} className={`text-slate-400 transition-transform flex-shrink-0 ml-1 ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] z-[999] p-2">
-          <div className="max-h-52 overflow-y-auto custom-scrollbar px-1">
-            {options.map((opt: any) => (
-              <div key={opt.value} onClick={() => { onChange({ target: { value: opt.value } }); setIsOpen(false); }} className={`group flex items-center justify-between px-4 py-3 my-0.5 text-[10px] font-black rounded-xl cursor-pointer transition-all ${value === opt.value ? 'bg-primary text-white shadow-md' : 'text-slate-600 hover:bg-slate-50 hover:text-primary'}`}>
-                <span className="truncate pr-2 uppercase">{opt.label}</span>
-                {value === opt.value && <Check size={12} className="flex-shrink-0" />}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
+// J'utilise le CustomBulleSelect importé, je supprime la définition inline pour utiliser celle de components/CommonComponents.tsx
 const BulleInput = ({ label, type = "text", value, onChange, placeholder, options, required, disabled, textarea, icon: Icon }: any) => {
   return (
     <div className={`flex flex-col space-y-1 ${disabled ? 'opacity-30 grayscale pointer-events-none' : ''}`}>
@@ -346,13 +322,18 @@ interface MarketListProps {
 }
 
 const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
-  const { marches, updateMarche, addMarche, projets, addProjet, updateProjet, fonctions } = useMarkets();
+  // RECUPERATION DU CONTEXTE GLOBAL (ETAT)
+  const { 
+    marches, updateMarche, addMarche, projets, addProjet, updateProjet, fonctions,
+    selectedYear, setSelectedYear, selectedProjetId, setSelectedProjetId
+  } = useMarkets();
   
-  // --- AJOUT : RECUPERATION DU PARAMETRE ID DEPUIS L'URL ---
   const [searchParams] = useSearchParams();
 
-  const [selectedYear, setSelectedYear] = useState(2024);
-  const [selectedProjetId, setSelectedProjetId] = useState<string | null>(null);
+  // On supprime les états locaux (useState) pour l'année et le projet, on utilise ceux du contexte
+  // const [selectedYear, setSelectedYear] = useState(2024); <-- SUPPRIMÉ
+  // const [selectedProjetId, setSelectedProjetId] = useState<string | null>(null); <-- SUPPRIMÉ
+
   const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
   
   const [activeTab, setActiveTab] = useState<'PASSATION' | 'EXECUTION'>('PASSATION');
@@ -382,14 +363,14 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     if (targetId && marches.length > 0) {
        const targetMarket = marches.find(m => m.id === targetId);
        if (targetMarket) {
-          // On sélectionne le bon contexte (Année / Projet)
+          // On sélectionne le bon contexte (Année / Projet) GLOBALEMENT
           setSelectedYear(targetMarket.exercice);
           setSelectedProjetId(targetMarket.projet_id);
           // On "ouvre" la ligne (expand) pour afficher les détails inline
           setExpandedMarketId(targetMarket.id);
        }
     }
-  }, [searchParams, marches]);
+  }, [searchParams, marches, setSelectedYear, setSelectedProjetId]);
 
 
   useEffect(() => {
@@ -458,8 +439,10 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
     
     addProjet(newProjet);
     
+    // MISE A JOUR DU CONTEXTE GLOBAL
     setSelectedYear(projectFormData.exercice);
     setSelectedProjetId(newId);
+    
     setIsProjectModalOpen(false);
   };
 
@@ -640,12 +623,14 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
             {readOnly ? 'Plan de Passation des Marchés' : (mode === 'PPM' ? 'Gestion de la Programmation' : 'Suivi des Marchés')}
           </h1>
           <div className="flex items-center gap-4 mt-2">
-             <div className="flex items-center gap-2 bg-slate-100 rounded-full px-4 py-1.5 border border-slate-200 shadow-inner">
-               <span className="text-[9px] font-black text-slate-400 uppercase">Exercice</span>
-               <select className="bg-transparent text-xs font-black outline-none cursor-pointer" value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))}>
-                 <option value={2024}>2024</option>
-                 <option value={2025}>2025</option>
-               </select>
+             <div className="w-32 bg-white rounded-2xl shadow-sm border border-slate-200">
+               {/* UTILISATION DU COMPOSANT CUSTOM AVEC LE CONTEXTE GLOBAL */}
+               <CustomBulleSelect 
+                  value={selectedYear.toString()} 
+                  onChange={(e: any) => setSelectedYear(parseInt(e.target.value))} 
+                  options={[{ value: '2024', label: '2024' }, { value: '2025', label: '2025' }, { value: '2026', label: '2026' }]}
+                  placeholder="Année"
+               />
              </div>
              {readOnly && (
                 <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest italic flex items-center gap-2 animate-pulse">

@@ -12,10 +12,11 @@ import {
   Layers,
   AlertTriangle
 } from 'lucide-react';
-// CORRECTION : On retire MOCK_PROJETS des imports car on va utiliser le contexte
 import { CURRENT_USER } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, UserRole } from '../types';
 import { useMarkets } from '../contexts/MarketContext';
+// IMPORT DU COMPOSANT CUSTOM
+import { CustomBulleSelect } from '../components/CommonComponents';
 
 // --- 1. DocCell : Upload ou Download selon le rôle ---
 const DocCell = ({ 
@@ -108,22 +109,32 @@ const AdminDateInput = ({ value, onChange, disabled }: { value?: string, onChang
 );
 
 const TrackingPage: React.FC = () => {
-  // CORRECTION ICI : On récupère 'projets' du contexte global
-  const { marches, updateMarche, projets } = useMarkets();
+  // RECUPERATION DES ETATS GLOBAUX (Annee + Projet)
+  const { 
+    marches, 
+    updateMarche, 
+    projets, 
+    selectedYear, 
+    setSelectedYear, 
+    selectedProjetId, 
+    setSelectedProjetId 
+  } = useMarkets();
+
   const [searchTerm, setSearchTerm] = useState('');
   
-  // --- NOUVEAUX ETATS POUR LE FILTRAGE ---
-  const [selectedYear, setSelectedYear] = useState<number>(2024);
-  const [selectedProjetId, setSelectedProjetId] = useState<string>('');
-
   const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
 
-  // CORRECTION ICI : On filtre sur la liste dynamique 'projets' et non MOCK_PROJETS
+  // Liste dynamique des projets disponibles pour l'année sélectionnée (globale)
   const availableProjects = projets.filter(p => p.exercice === selectedYear);
 
-  // Mise à jour auto du projet si l'année change
+  // Mise à jour auto du projet si l'année change (Si le projet sélectionné n'est pas dans la nouvelle année)
   useEffect(() => {
-    setSelectedProjetId('');
+    // Optionnel : on peut vouloir garder la sélection si possible, ou reset.
+    // Ici on reset pour éviter les incohérences si on change d'année brutalement.
+    const projectStillValid = availableProjects.find(p => p.id === selectedProjetId);
+    if (!projectStillValid && selectedProjetId !== '') {
+       setSelectedProjetId('');
+    }
   }, [selectedYear]);
 
   const handleUpdateDate = (marketId: string, key: JalonPassationKey, value: string) => {
@@ -202,34 +213,34 @@ const TrackingPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center gap-3">
+        {/* CONTENEUR DES FILTRES - MODIFIÉ POUR SUPPORTER CUSTOM SELECTS */}
+        <div className="flex flex-col md:flex-row items-center gap-3 flex-wrap">
           
-          {/* SÉLECTEUR ANNÉE */}
-          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm">
-             <span className="text-[9px] font-black text-slate-400 uppercase">Exercice</span>
-             <select 
-                value={selectedYear} 
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer"
-             >
-               <option value={2024}>2024</option>
-               <option value={2025}>2025</option>
-             </select>
+          {/* SÉLECTEUR ANNÉE - CUSTOM */}
+          <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm whitespace-nowrap min-w-[120px]">
+             <CustomBulleSelect 
+               value={selectedYear.toString()} 
+               onChange={(e: any) => setSelectedYear(parseInt(e.target.value))} 
+               options={[
+                 { value: '2024', label: '2024' },
+                 { value: '2025', label: '2025' },
+                 { value: '2026', label: '2026' }
+               ]}
+               placeholder="Année"
+             />
           </div>
 
-          {/* SÉLECTEUR PROJET */}
-          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm min-w-[200px]">
-             <Layers size={14} className="text-slate-400" />
-             <select 
-                value={selectedProjetId} 
-                onChange={(e) => setSelectedProjetId(e.target.value)}
-                className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer w-full truncate"
-             >
-               <option value="">Tous les Projets</option>
-               {availableProjects.map(p => (
-                 <option key={p.id} value={p.id}>{p.libelle}</option>
-               ))}
-             </select>
+          {/* SÉLECTEUR PROJET - CUSTOM */}
+          <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm min-w-[200px] max-w-xs">
+             <CustomBulleSelect 
+               value={selectedProjetId} 
+               onChange={(e: any) => setSelectedProjetId(e.target.value)} 
+               options={[
+                 { value: '', label: 'Tous les Projets' },
+                 ...availableProjects.map(p => ({ value: p.id, label: p.libelle }))
+               ]}
+               placeholder="Tous les Projets"
+             />
           </div>
 
           <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
