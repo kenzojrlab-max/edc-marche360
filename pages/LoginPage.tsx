@@ -35,7 +35,7 @@ const LoginPage: React.FC = () => {
               <LogIn size={32} />
            </div>
            <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Connexion</h1>
-           <p className="text-xs text-slate-400 font-medium mt-2">Accès sécurisé à ProCureCM</p>
+           <p className="text-xs text-slate-400 font-medium mt-2">EDC Marchés360</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

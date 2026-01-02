@@ -73,29 +73,59 @@ const TrackingPage: React.FC = () => {
     alert("✅ Modifications enregistrées avec succès dans le registre !");
   };
 
+  // 🔥 CORRECTION CRITIQUE ICI 🔥
   const handleUpdateDate = (marketId: string, key: JalonPassationKey, value: string) => {
     if (!isAdmin) return;
     const market = marches.find(m => m.id === marketId);
-    if (market) updateMarche({ ...market, dates_realisees: { ...market.dates_realisees, [key]: value } });
+    if (!market) return;
+    
+    // IMPORTANT : On copie TOUT l'objet marché existant et on met à jour SEULEMENT la date
+    const updatedMarket = {
+      ...market, // ✅ COPIE COMPLÈTE de l'objet existant
+      dates_realisees: { 
+        ...market.dates_realisees, // ✅ COPIE COMPLÈTE des dates existantes
+        [key]: value // ✅ Mise à jour SEULEMENT de la date ciblée
+      }
+    };
+    
+    updateMarche(updatedMarket);
   };
 
+  // 🔥 CORRECTION CRITIQUE ICI 🔥
   const handleUpdateField = (marketId: string, field: string, value: any) => {
     if (!isAdmin) return;
     const market = marches.find(m => m.id === marketId);
-    if (market) updateMarche({ ...market, [field]: value });
+    if (!market) return;
+    
+    // IMPORTANT : On copie TOUT l'objet marché existant et on met à jour SEULEMENT le champ
+    const updatedMarket = { 
+      ...market, // ✅ COPIE COMPLÈTE de l'objet existant
+      [field]: value // ✅ Mise à jour SEULEMENT du champ ciblé
+    };
+    
+    updateMarche(updatedMarket);
   };
 
   const handleDocUpload = (marketId: string, docKey: string, file: File, isSpecialDoc?: boolean) => {
     if (!isAdmin) return;
     const market = marches.find(m => m.id === marketId);
-    if (market) {
-        const fakeUrl = URL.createObjectURL(file);
-        const newDoc = { nom: file.name, url: fakeUrl, date_upload: new Date().toISOString().split('T')[0] };
-        let updatedMarket = { ...market };
-        if (isSpecialDoc) updatedMarket = { ...updatedMarket, [docKey]: newDoc };
-        else updatedMarket = { ...updatedMarket, docs: { ...updatedMarket.docs, [docKey]: newDoc } };
-        updateMarche(updatedMarket);
+    if (!market) return;
+    
+    const fakeUrl = URL.createObjectURL(file);
+    const newDoc = { nom: file.name, url: fakeUrl, date_upload: new Date().toISOString().split('T')[0] };
+    
+    let updatedMarket = { ...market }; // ✅ COPIE COMPLÈTE
+    
+    if (isSpecialDoc) {
+      updatedMarket = { ...updatedMarket, [docKey]: newDoc };
+    } else {
+      updatedMarket = { 
+        ...updatedMarket, 
+        docs: { ...updatedMarket.docs, [docKey]: newDoc } // ✅ COPIE des docs existants
+      };
     }
+    
+    updateMarche(updatedMarket);
   };
 
   const filteredMarches = marches.filter(m => {
@@ -163,7 +193,6 @@ const TrackingPage: React.FC = () => {
                 <th colSpan={3} className="px-4 py-2 text-center bg-slate-800">31-33. Clôture</th>
               </tr>
               <tr className="bg-slate-50 text-slate-400 border-b border-slate-200 uppercase text-[8px]">
-                {/* En-têtes (raccourcis pour lisibilité, même structure qu'avant) */}
                 <th className="px-3 py-3 sticky left-0 bg-slate-50 z-20 border-r border-slate-200">1. N°</th>
                 <th className="px-3 py-3 min-w-[160px] border-r border-slate-200">2. Intitulé projet</th>
                 <th className="px-3 py-3 border-r border-slate-200">3. Financement</th>
@@ -179,10 +208,7 @@ const TrackingPage: React.FC = () => {
                 <th className="px-3 py-3 border-r border-slate-200 text-center">13. Valid. Éval.</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">14. ANO bailleurs</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">15. Ouv. Fin.</th>
-                
-                {/* CORRECTION TAILLE EN-TÊTE 16 */}
                 <th className="px-3 py-3 border-r border-slate-200 text-center min-w-[160px]">16. Infructueux</th>
-                
                 <th className="px-3 py-3 border-r border-slate-200 text-center">17. Prop. Attrib.</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">18. Avis CA</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">19. ANO Bailleurs</th>
@@ -196,15 +222,9 @@ const TrackingPage: React.FC = () => {
                 <th className="px-3 py-3 border-r border-slate-200 text-center">27. Validation</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">28. ANO bailleurs</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">29. Signature</th>
-                
-                {/* CORRECTION TAILLE EN-TÊTE 30 */}
                 <th className="px-3 py-3 border-r border-slate-200 text-center min-w-[160px]">30. Annulé</th>
-                
                 <th className="px-3 py-3 border-r border-slate-200 text-center">31. Notification</th>
-                
-                {/* CORRECTION TAILLE EN-TÊTE 32 */}
                 <th className="px-3 py-3 border-r border-slate-200 min-w-[160px]">32. Recours</th>
-                
                 <th className="px-3 py-3">33. Etat</th>
               </tr>
             </thead>
@@ -229,7 +249,6 @@ const TrackingPage: React.FC = () => {
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_eval} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_eval', v)} /><DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_eval} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_eval', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.ouverture_financiere} onChange={(v) => handleUpdateDate(m.id, 'ouverture_financiere', v)} /><DocCell doc={m.docs?.ouverture_financiere} label="PV" onUpload={(f) => handleDocUpload(m.id, 'ouverture_financiere', f)} /></div></td>
                     
-                    {/* COLONNE 16 : INFRUCTUEUX (LARGEUR HARMONISÉE 140px) */}
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
                         <div className="w-[140px]">
@@ -259,7 +278,6 @@ const TrackingPage: React.FC = () => {
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_projet} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_projet', v)} /><DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_projet} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_projet', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.signature_marche} onChange={(v) => handleUpdateDate(m.id, 'signature_marche', v)} /><DocCell doc={m.docs?.signature_marche} label="Marché" onUpload={(f) => handleDocUpload(m.id, 'signature_marche', f)} /></div></td>
                     
-                    {/* COLONNE 30 : ANNULÉ (LARGEUR HARMONISÉE 140px) */}
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex flex-col gap-1.5 items-center">
                         <div className="w-[140px]">
@@ -277,7 +295,6 @@ const TrackingPage: React.FC = () => {
 
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.notification} onChange={(v) => handleUpdateDate(m.id, 'notification', v)} /></td>
                     
-                    {/* COLONNE 32 : RECOURS (LARGEUR HARMONISÉE 140px) */}
                     <td className="px-3 py-2.5 border-r border-slate-100">
                       <div className="flex flex-col gap-1.5 items-center">
                         <div className="w-[140px]">

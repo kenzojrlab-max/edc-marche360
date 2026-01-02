@@ -153,7 +153,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center mr-3">
               <FolderOpen className="text-white" size={20} />
             </div>
-            <span className="text-xl font-bold text-slate-800 tracking-tight">ProCure<span className="text-primary">CM</span></span>
+            <span className="text-xl font-bold text-slate-800 tracking-tight">EDC <span className="text-primary">Marchés360</span></span>
             <button className="ml-auto lg:hidden" onClick={() => setSidebarOpen(false)}>
               <X size={20} className="text-slate-400" />
             </button>
@@ -250,9 +250,6 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
                           <div 
                             key={idx} 
                             onClick={() => {
-                              // --- CORRECTION MAJEURE ICI ---
-                              // Redirection vers /ppm-view (Liste de consultation) au lieu de /markets (Détail)
-                              // On passe l'ID en paramètre query string (?id=...)
                               navigate(`/ppm-view?id=${encodeURIComponent(alert.market.id)}`); 
                               setShowNotifications(false);
                             }}

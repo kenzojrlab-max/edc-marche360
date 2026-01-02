@@ -14,6 +14,7 @@ interface CustomBulleSelectProps {
   options: SelectOption[];
   placeholder?: string;
   disabled?: boolean;
+  position?: 'top' | 'bottom'; // AJOUT DE LA PROP POSITION
 }
 
 export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({ 
@@ -21,7 +22,8 @@ export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({
   onChange, 
   options, 
   placeholder = "Choisir...", 
-  disabled = false 
+  disabled = false,
+  position = 'bottom' // VALEUR PAR DÉFAUT
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
@@ -34,16 +36,18 @@ export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
       
-      // Décision intelligente : Haut ou Bas ?
-      const showAbove = spaceBelow < 300; // Augmenté pour plus de confort
+      // CORRECTION : Utilise la prop position si fournie, sinon décide automatiquement
+      let showAbove = position === 'top';
+      if (position !== 'top' && position !== 'bottom') {
+        showAbove = spaceBelow < 300;
+      }
 
       setDropdownStyle({
         position: 'fixed',
         left: `${rect.left}px`,
-        // CORRECTION MAJEURE ICI :
-        minWidth: `${rect.width}px`, // Largeur minimale = largeur du bouton
-        width: 'max-content',        // S'adapte au contenu (textes longs)
-        maxWidth: '90vw',            // Sécurité pour ne pas dépasser l'écran
+        minWidth: `${rect.width}px`,
+        width: 'max-content',
+        maxWidth: '90vw',
         top: showAbove ? 'auto' : `${rect.bottom + 5}px`,
         bottom: showAbove ? `${window.innerHeight - rect.top + 5}px` : 'auto',
         zIndex: 99999,
@@ -61,7 +65,7 @@ export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({
       window.removeEventListener('scroll', updatePosition, true);
       window.removeEventListener('resize', updatePosition);
     };
-  }, [isOpen]);
+  }, [isOpen, position]); // AJOUT DE position DANS LES DÉPENDANCES
 
   // Fermeture au clic extérieur
   useEffect(() => {
