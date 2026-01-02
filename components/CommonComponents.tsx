@@ -1,5 +1,5 @@
 // components/CommonComponents.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
 interface SelectOption {
@@ -23,6 +23,7 @@ export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({
   disabled = false 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState<'bottom' | 'top'>('bottom'); // Etat pour la direction
   const containerRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.value === value);
 
@@ -37,6 +38,21 @@ export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  // --- LOGIQUE INTELLIGENTE DE POSITIONNEMENT ---
+  useLayoutEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      
+      // Si l'espace en bas est inférieur à 250px (hauteur approx du menu), on ouvre vers le HAUT
+      if (spaceBelow < 250) {
+        setPosition('top');
+      } else {
+        setPosition('bottom');
+      }
+    }
   }, [isOpen]);
 
   return (
@@ -57,9 +73,11 @@ export const CustomBulleSelect: React.FC<CustomBulleSelectProps> = ({
         />
       </div>
       
-      {/* CORRECTION ICI : z-index élevé (z-50) et position absolue */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 p-2 max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 w-full min-w-[150px]">
+        <div 
+          className={`absolute left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] z-[999] p-2 max-h-64 overflow-y-auto animate-in fade-in duration-200 w-full min-w-[150px]
+          ${position === 'top' ? 'bottom-full mb-2 slide-in-from-bottom-2' : 'top-full mt-2 slide-in-from-top-2'}`}
+        >
           {options.map((opt) => (
             <div 
               key={opt.value} 

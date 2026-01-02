@@ -127,7 +127,6 @@ const Settings: React.FC = () => {
 
       {/* --- USERS TAB --- */}
       {activeTab === 'USERS' && (
-        // CORRECTION ICI : overflow-visible au lieu de overflow-hidden pour laisser sortir les dropdowns
         <div className="bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-visible animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-[2rem]">
              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">Liste des Utilisateurs</h3>
@@ -139,7 +138,6 @@ const Settings: React.FC = () => {
              )}
           </div>
           
-          {/* CORRECTION ICI : overflow-visible sur le conteneur du tableau aussi */}
           <div className="overflow-visible">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-400 font-black uppercase tracking-wider border-b border-slate-100">
@@ -152,13 +150,17 @@ const Settings: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {users.map(u => {
+                {users.map((u, index) => {
                    const isGuest = u.role === UserRole.GUEST;
                    const isMe = u.id === currentUser?.id;
                    
                    // Détermine le rôle à afficher (celui en cours de modif OU le réel)
                    const displayedRole = pendingRoles[u.id] || u.role;
                    const hasPendingChange = pendingRoles[u.id] && pendingRoles[u.id] !== u.role;
+
+                   // CORRECTION ICI : Détection des derniers éléments de la liste
+                   // Si c'est l'un des 2 derniers utilisateurs, on ouvre le menu vers le HAUT ('top')
+                   const isLastItems = index >= users.length - 2;
 
                    return (
                     <tr key={u.id} className={`hover:bg-slate-50 transition-colors ${isMe ? 'bg-blue-50/30' : ''}`}>
@@ -177,6 +179,8 @@ const Settings: React.FC = () => {
                                   onChange={(e: any) => handleRoleSelect(u.id, e.target.value as UserRole)}
                                   options={roleOptions}
                                   placeholder="Sélectionner un rôle"
+                                  // CORRECTION : On passe la position calculée
+                                  position={isLastItems ? 'top' : 'bottom'}
                                />
                             </div>
 

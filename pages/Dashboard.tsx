@@ -8,6 +8,7 @@ import { TrendingUp, AlertCircle, CheckCircle, Clock, ArrowRight, DollarSign, Ti
 import { formatFCFA, calculateDaysBetween } from '../services/mockData';
 import { StatutGlobal, SourceFinancement } from '../types';
 import { useMarkets } from '../contexts/MarketContext'; 
+// IMPORT DU COMPOSANT CUSTOM
 import { CustomBulleSelect } from '../components/CommonComponents';
 
 const COLORS = ['#1e3a8a', '#10b981', '#f59e0b', '#ef4444'];
@@ -62,7 +63,7 @@ const getDelayDays = (m: any, jalonKey: string) => {
   return d ? Math.max(0, d) : 0;
 };
 
-// --- CORRECTION ICI : StatCard optimisée pour tenir sur une seule ligne ---
+// --- COMPOSANT STAT CARD OPTIMISÉ ---
 const StatCard = ({ title, value, subtext, icon: Icon, colorClass }: any) => (
   <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-shadow h-full">
     <div className="flex-1 min-w-0 mr-3">
@@ -82,17 +83,30 @@ const StatCard = ({ title, value, subtext, icon: Icon, colorClass }: any) => (
 );
 
 const Dashboard: React.FC = () => {
-  const { marches, projets, fonctions } = useMarkets();
+  // CORRECTION ICI : On utilise les setters du contexte global
+  const { 
+    marches, 
+    projets, 
+    fonctions, 
+    selectedYear, 
+    setSelectedYear, 
+    selectedProjetId, 
+    setSelectedProjetId 
+  } = useMarkets();
   
-  const [selectedYear, setSelectedYear] = useState<number>(2024);
-  const [selectedProjetId, setSelectedProjetId] = useState<string>('');
+  // Le filtre de fonction reste local au dashboard car c'est un filtre d'affichage temporaire
   const [filterFonction, setFilterFonction] = useState<string>('');
 
   const availableProjects = projets.filter(p => p.exercice === selectedYear);
 
+  // CORRECTION : On ne réinitialise le projet QUE s'il n'est plus valide pour l'année sélectionnée
+  // Cela permet de garder le projet sélectionné quand on navigue entre les pages si l'année ne change pas
   useEffect(() => {
-    setSelectedProjetId('');
-  }, [selectedYear]);
+    const isProjectValid = availableProjects.find(p => p.id === selectedProjetId);
+    if (!isProjectValid && selectedProjetId !== '') {
+       setSelectedProjetId('');
+    }
+  }, [selectedYear, availableProjects, selectedProjetId, setSelectedProjetId]);
   
   let data = marches.filter(m => {
     const matchYear = m.exercice === selectedYear;
@@ -180,20 +194,24 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
         
-        {/* CORRECTION ICI : Remplacement de overflow-x-auto par flex-wrap pour éviter de couper les dropdowns */}
+        {/* FILTRES GLOBAUX AVEC CUSTOM SELECTS */}
         <div className="flex flex-col md:flex-row items-center gap-3 flex-wrap">
+          
+          {/* SELECTEUR ANNEE */}
           <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm whitespace-nowrap min-w-[120px]">
              <CustomBulleSelect 
                value={selectedYear.toString()} 
                onChange={(e: any) => setSelectedYear(parseInt(e.target.value))} 
                options={[
                  { value: '2024', label: '2024' },
-                 { value: '2025', label: '2025' }
+                 { value: '2025', label: '2025' },
+                 { value: '2026', label: '2026' }
                ]}
                placeholder="Année"
              />
           </div>
 
+          {/* SELECTEUR PROJET */}
           <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm min-w-[200px] max-w-xs">
              <CustomBulleSelect 
                value={selectedProjetId} 
@@ -202,12 +220,13 @@ const Dashboard: React.FC = () => {
                  { value: '', label: 'Tous les Projets' },
                  ...availableProjects.map(p => ({ value: p.id, label: p.libelle }))
                ]}
-               placeholder="Sélectionner un projet"
+               placeholder="Tous les Projets"
              />
           </div>
 
           <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
 
+          {/* FILTRE FONCTION (LOCAL) */}
           <div className="bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm min-w-[200px]">
             <CustomBulleSelect 
               value={filterFonction} 
