@@ -8,6 +8,8 @@ import {
 import { DocumentCategory, LibraryDocument, UserRole } from '../types';
 import { useMarkets } from '../contexts/MarketContext';
 import { CURRENT_USER } from '../services/mockData';
+// IMPORT DU COMPOSANT CUSTOM
+import { CustomBulleSelect } from '../components/CommonComponents';
 
 const CATEGORY_LABELS: Record<DocumentCategory, string> = {
   [DocumentCategory.AUDITS]: 'Rapports d\'Audits',
@@ -16,7 +18,6 @@ const CATEGORY_LABELS: Record<DocumentCategory, string> = {
   [DocumentCategory.MODELES]: 'Modèles & Lettres Types'
 };
 
-// Fonction utilitaire pour choisir l'icône et la couleur selon l'extension
 const getFileIcon = (format: string) => {
   const ext = format.toUpperCase();
   if (ext.includes('PDF')) return { icon: FileCode, color: 'text-red-600', bg: 'bg-red-50' };
@@ -46,10 +47,8 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
-  // VERIFICATION DU ROLE GUEST
   const isGuest = CURRENT_USER.role === UserRole.GUEST;
 
-  // Filtering Logic
   const filteredDocs = documents.filter(doc => {
     const matchesCategory = activeCategory === 'ALL' || doc.categorie === activeCategory;
     const matchesSearch = doc.titre.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -57,7 +56,6 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
     return matchesCategory && matchesSearch;
   });
 
-  // Gestion de l'ajout
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
@@ -73,8 +71,6 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
 
     const fileExtension = selectedFile.name.split('.').pop()?.toUpperCase() || 'FILE';
     const fakeUrl = URL.createObjectURL(selectedFile);
-    
-    // Calcul taille approximative (pour la démo)
     const sizeInKb = Math.round(selectedFile.size / 1024);
     const sizeDisplay = sizeInKb > 1024 ? `${(sizeInKb/1024).toFixed(1)} MB` : `${sizeInKb} KB`;
 
@@ -92,8 +88,6 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
 
     addDocument(newDoc);
     setIsModalOpen(false);
-    
-    // Reset form
     setNewDocData({ titre: '', categorie: DocumentCategory.REGLEMENTAIRE, description: '' });
     setSelectedFile(null);
   };
@@ -103,6 +97,12 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
       deleteDocument(id);
     }
   };
+
+  // Transformation des catégories pour le sélecteur custom
+  const categoryOptions = Object.entries(CATEGORY_LABELS).map(([key, label]) => ({
+    value: key,
+    label: label
+  }));
 
   return (
     <div className="space-y-6 pb-20">
@@ -118,7 +118,6 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
           </p>
         </div>
         
-        {/* BOUTON AJOUTER VISIBLE SEULEMENT SI PAS READONLY ET ADMIN */}
         {!readOnly && isAdmin && (
           <button 
             onClick={() => setIsModalOpen(true)}
@@ -180,7 +179,6 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
             return (
               <div key={doc.id} className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 hover:shadow-lg transition-shadow group flex flex-col relative">
                 
-                {/* Bouton Supprimer VISIBLE SEULEMENT SI PAS READONLY ET ADMIN */}
                 {!readOnly && isAdmin && (
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
@@ -225,7 +223,6 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
                   <div className="text-right flex flex-col items-end gap-1">
                      <span className="text-slate-300">{doc.taille}</span>
                      
-                     {/* LOGIQUE RESTRICTION INVITE */}
                      {isGuest ? (
                        <span className="text-slate-400 flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg cursor-not-allowed opacity-60" title="Téléchargement restreint">
                          <Lock size={12} /> Accès restreint
@@ -259,7 +256,7 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
       {/* MODAL AJOUT DOCUMENT */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-visible animate-in zoom-in-95 duration-200">
              <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Ajouter un document</h2>
                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} className="text-slate-500" /></button>
@@ -267,7 +264,6 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
              
              <form onSubmit={handleSubmit} className="p-8 space-y-6">
                 
-                {/* Titre */}
                 <div className="space-y-2">
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Titre du document</label>
                    <input 
@@ -280,21 +276,19 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
                    />
                 </div>
 
-                {/* Catégorie */}
+                {/* Catégorie - CORRIGÉ AVEC CustomBulleSelect */}
                 <div className="space-y-2">
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Catégorie</label>
-                   <select 
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-bold outline-none focus:border-primary cursor-pointer appearance-none"
-                      value={newDocData.categorie}
-                      onChange={(e) => setNewDocData({...newDocData, categorie: e.target.value as DocumentCategory})}
-                   >
-                      {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                        <option key={key} value={key}>{label}</option>
-                      ))}
-                   </select>
+                   <div className="bg-slate-50 border border-slate-200 rounded-2xl px-2 py-1">
+                      <CustomBulleSelect 
+                         value={newDocData.categorie}
+                         onChange={(e: any) => setNewDocData({...newDocData, categorie: e.target.value as DocumentCategory})}
+                         options={categoryOptions}
+                         placeholder="Choisir une catégorie"
+                      />
+                   </div>
                 </div>
 
-                {/* Description */}
                 <div className="space-y-2">
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Description (Optionnel)</label>
                    <textarea 
@@ -305,7 +299,6 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
                    />
                 </div>
 
-                {/* Fichier */}
                 <div className="space-y-2">
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Fichier joint</label>
                    <div className="relative group">
@@ -314,7 +307,7 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ readOnly = true }) =>
                        id="doc-upload" 
                        className="hidden" 
                        onChange={handleFileSelect}
-                       accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.png" // Accepte Office + Images
+                       accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.png" 
                      />
                      <label htmlFor="doc-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-slate-50 hover:border-primary transition-all">
                         {selectedFile ? (

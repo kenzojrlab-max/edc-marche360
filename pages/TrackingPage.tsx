@@ -15,6 +15,7 @@ import {
 import { CURRENT_USER } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, UserRole } from '../types';
 import { useMarkets } from '../contexts/MarketContext';
+// IMPORT DU COMPOSANT CUSTOM
 import { CustomBulleSelect } from '../components/CommonComponents';
 
 const DocCell = ({ doc, label, disabled, onUpload }: { doc?: any, label: string, disabled?: boolean, onUpload?: (file: File) => void }) => {
@@ -227,10 +228,22 @@ const TrackingPage: React.FC = () => {
                 const isEDC = m.source_financement === SourceFinancement.BUDGET_EDC;
                 return (
                   <tr key={m.id} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="px-3 py-2.5 sticky left-0 bg-white group-hover:bg-slate-50 z-20 border-r border-slate-100 font-black text-primary"><Link to={`/markets/${m.id}`}>{m.id}</Link></td>
-                    <td className="px-3 py-2.5 border-r border-slate-100"><div className="flex items-center gap-1.5 justify-between"><span className="truncate max-w-[120px] text-slate-700" title={m.objet}>{m.objet}</span><DocCell doc={m.docs?.dao} label="DAO" onUpload={(f) => handleDocUpload(m.id, 'dao', f)} /></div></td>
+                    <td className="px-3 py-2.5 sticky left-0 bg-white group-hover:bg-slate-50 z-20 border-r border-slate-100 font-black text-primary">
+                      <Link to={`/markets/${m.id}`}>{m.id}</Link>
+                    </td>
+                    <td className="px-3 py-2.5 border-r border-slate-100">
+                      <div className="flex items-center gap-1.5 justify-between">
+                        <span className="truncate max-w-[120px] text-slate-700" title={m.objet}>{m.objet}</span>
+                        <DocCell doc={m.docs?.dao} label="DAO" onUpload={(f) => handleDocUpload(m.id, 'dao', f)} />
+                      </div>
+                    </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-slate-400 text-[8px]">{m.source_financement}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100"><div className="flex items-center gap-1.5 justify-between"><span className="font-mono text-slate-500">{m.imputation_budgetaire}</span><DocCell doc={m.docs?.imputation} label="Attest. DF" onUpload={(f) => handleDocUpload(m.id, 'imputation', f)} /></div></td>
+                    <td className="px-3 py-2.5 border-r border-slate-100">
+                      <div className="flex items-center gap-1.5 justify-between">
+                        <span className="font-mono text-slate-500">{m.imputation_budgetaire}</span>
+                        <DocCell doc={m.docs?.imputation} label="Attest. DF" onUpload={(f) => handleDocUpload(m.id, 'imputation', f)} />
+                      </div>
+                    </td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.saisine_cipm_prev} onChange={(v) => handleUpdateDate(m.id, 'saisine_cipm_prev', v)} /></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.saisine_cipm} onChange={(v) => handleUpdateDate(m.id, 'saisine_cipm', v)} /><DocCell doc={m.docs?.saisine} label="Saisine" onUpload={(f) => handleDocUpload(m.id, 'saisine', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.examen_dao_cipm} onChange={(v) => handleUpdateDate(m.id, 'examen_dao_cipm', v)} /></td>
@@ -242,12 +255,23 @@ const TrackingPage: React.FC = () => {
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.validation_eval_offres} onChange={(v) => handleUpdateDate(m.id, 'validation_eval_offres', v)} /><DocCell doc={m.docs?.validation_eval_offres} label="PV" onUpload={(f) => handleDocUpload(m.id, 'validation_eval_offres', f)} /></div></td>
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_eval} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_eval', v)} /><DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_eval} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_eval', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.ouverture_financiere} onChange={(v) => handleUpdateDate(m.id, 'ouverture_financiere', v)} /><DocCell doc={m.docs?.ouverture_financiere} label="PV" onUpload={(f) => handleDocUpload(m.id, 'ouverture_financiere', f)} /></div></td>
+                    
+                    {/* COLONNE 16 : INFRUCTUEUX (MODIFIÉE) */}
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
-                        <select disabled={!isAdmin} value={m.is_infructueux ? 'Oui' : 'Non'} onChange={(e) => handleUpdateField(m.id, 'is_infructueux', e.target.value === 'Oui')} className={`bg-white border rounded text-[7px] font-black outline-none ${m.is_infructueux ? 'text-red-600 border-red-200' : 'text-slate-400 border-slate-200'}`}><option value="Non">NON</option><option value="Oui">OUI</option></select>
+                        <div className="w-20">
+                           <CustomBulleSelect 
+                              value={m.is_infructueux ? 'Oui' : 'Non'} 
+                              onChange={(e: any) => handleUpdateField(m.id, 'is_infructueux', e.target.value === 'Oui')}
+                              options={[{ value: 'Non', label: 'NON' }, { value: 'Oui', label: 'OUI' }]}
+                              disabled={!isAdmin}
+                              placeholder="-"
+                           />
+                        </div>
                         {m.is_infructueux && <DocCell doc={m.doc_infructueux} label="Décision" onUpload={(f) => handleDocUpload(m.id, 'doc_infructueux', f, true)} />}
                       </div>
                     </td>
+
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.prop_attrib_cipm} onChange={(v) => handleUpdateDate(m.id, 'prop_attrib_cipm', v)} /><DocCell doc={m.docs?.prop_attrib_cipm} label="PV" onUpload={(f) => handleDocUpload(m.id, 'prop_attrib_cipm', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.avis_conforme_ca} onChange={(v) => handleUpdateDate(m.id, 'avis_conforme_ca', v)} /><DocCell doc={m.docs?.avis_conforme_ca} label="Avis" onUpload={(f) => handleDocUpload(m.id, 'avis_conforme_ca', f)} /></div></td>
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_attrib} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_attrib', v)} /><DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_attrib} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_attrib', f)} /></div></td>
@@ -261,9 +285,40 @@ const TrackingPage: React.FC = () => {
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.validation_projet} onChange={(v) => handleUpdateDate(m.id, 'validation_projet', v)} /><DocCell doc={m.docs?.validation_projet} label="PV" onUpload={(f) => handleDocUpload(m.id, 'validation_projet', f)} /></div></td>
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_projet} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_projet', v)} /><DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_projet} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_projet', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.signature_marche} onChange={(v) => handleUpdateDate(m.id, 'signature_marche', v)} /><DocCell doc={m.docs?.signature_marche} label="Marché" onUpload={(f) => handleDocUpload(m.id, 'signature_marche', f)} /></div></td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-center min-w-[200px]"><div className="flex flex-col gap-1.5"><select disabled={!isAdmin} value={m.is_annule ? 'Oui' : 'Non'} onChange={(e) => handleUpdateField(m.id, 'is_annule', e.target.value === 'Oui')} className={`bg-white border rounded text-[7px] font-black outline-none w-full ${m.is_annule ? 'text-amber-600 border-amber-200' : 'text-slate-400 border-slate-200'}`}><option value="Non">NON</option><option value="Oui">OUI (ANNULÉ)</option></select>{m.is_annule && (<div className="animate-in slide-in-from-top-1 fade-in duration-200 space-y-1"><input type="text" disabled={!isAdmin} placeholder="Motif..." value={m.motif_annulation || ''} onChange={(e) => handleUpdateField(m.id, 'motif_annulation', e.target.value)} className="w-full bg-amber-50 border-none rounded px-1.5 py-1 text-[8px] font-bold text-amber-800 placeholder:text-amber-300 outline-none" /><div className="flex justify-end"><DocCell doc={m.doc_annulation_ca} label="Accord CA" onUpload={(f) => handleDocUpload(m.id, 'doc_annulation_ca', f, true)} /></div></div>)}</div></td>
+                    
+                    {/* COLONNE 30 : ANNULÉ (MODIFIÉE) */}
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-center min-w-[200px]">
+                      <div className="flex flex-col gap-1.5">
+                        <div className="w-full min-w-[120px]">
+                           <CustomBulleSelect 
+                              value={m.is_annule ? 'Oui' : 'Non'} 
+                              onChange={(e: any) => handleUpdateField(m.id, 'is_annule', e.target.value === 'Oui')}
+                              options={[{ value: 'Non', label: 'NON' }, { value: 'Oui', label: 'OUI (ANNULÉ)' }]}
+                              disabled={!isAdmin}
+                              placeholder="-"
+                           />
+                        </div>
+                        {m.is_annule && (<div className="animate-in slide-in-from-top-1 fade-in duration-200 space-y-1"><input type="text" disabled={!isAdmin} placeholder="Motif..." value={m.motif_annulation || ''} onChange={(e) => handleUpdateField(m.id, 'motif_annulation', e.target.value)} className="w-full bg-amber-50 border-none rounded px-1.5 py-1 text-[8px] font-bold text-amber-800 placeholder:text-amber-300 outline-none" /><div className="flex justify-end"><DocCell doc={m.doc_annulation_ca} label="Accord CA" onUpload={(f) => handleDocUpload(m.id, 'doc_annulation_ca', f, true)} /></div></div>)}
+                      </div>
+                    </td>
+
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.notification} onChange={(v) => handleUpdateDate(m.id, 'notification', v)} /></td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 min-w-[150px]"><div className="flex flex-col gap-1.5"><select disabled={!isAdmin} value={m.has_recours ? 'Oui' : 'Non'} onChange={(e) => handleUpdateField(m.id, 'has_recours', e.target.value === 'Oui')} className={`bg-white border rounded text-[7px] font-black outline-none w-full ${m.has_recours ? 'text-orange-600 border-orange-200' : 'text-slate-400 border-slate-200'}`}><option value="Non">NON</option><option value="Oui">CONTENTIEUX</option></select>{m.has_recours && (<div className="animate-in slide-in-from-top-1 fade-in duration-200 space-y-1"><input type="text" disabled={!isAdmin} placeholder="Issue/Verdict..." value={m.recours_issue || ''} onChange={(e) => handleUpdateField(m.id, 'recours_issue', e.target.value)} className="w-full bg-orange-50 border-none rounded px-1.5 py-1 text-[8px] font-bold text-orange-800 placeholder:text-orange-300 outline-none" /><div className="flex justify-end"><DocCell doc={m.doc_recours} label="Pièce" onUpload={(f) => handleDocUpload(m.id, 'doc_recours', f, true)} /></div></div>)}</div></td>
+                    
+                    {/* COLONNE 32 : RECOURS (MODIFIÉE) */}
+                    <td className="px-3 py-2.5 border-r border-slate-100 min-w-[150px]">
+                      <div className="flex flex-col gap-1.5">
+                        <div className="w-full min-w-[120px]">
+                           <CustomBulleSelect 
+                              value={m.has_recours ? 'Oui' : 'Non'} 
+                              onChange={(e: any) => handleUpdateField(m.id, 'has_recours', e.target.value === 'Oui')}
+                              options={[{ value: 'Non', label: 'NON' }, { value: 'Oui', label: 'CONTENTIEUX' }]}
+                              disabled={!isAdmin}
+                              placeholder="-"
+                           />
+                        </div>
+                        {m.has_recours && (<div className="animate-in slide-in-from-top-1 fade-in duration-200 space-y-1"><input type="text" disabled={!isAdmin} placeholder="Issue/Verdict..." value={m.recours_issue || ''} onChange={(e) => handleUpdateField(m.id, 'recours_issue', e.target.value)} className="w-full bg-orange-50 border-none rounded px-1.5 py-1 text-[8px] font-bold text-orange-800 placeholder:text-orange-300 outline-none" /><div className="flex justify-end"><DocCell doc={m.doc_recours} label="Pièce" onUpload={(f) => handleDocUpload(m.id, 'doc_recours', f, true)} /></div></div>)}
+                      </div>
+                    </td>
                     <td className="px-3 py-2.5 bg-primary/5 text-primary text-[8px] uppercase">{m.etat_avancement}</td>
                   </tr>
                 );

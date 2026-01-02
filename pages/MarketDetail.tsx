@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { useMarkets } from '../contexts/MarketContext'; 
 import { Marche } from '../types';
+// IMPORT DU COMPOSANT CUSTOM
+import { CustomBulleSelect } from '../components/CommonComponents';
 
 // --- FONCTION INTELLIGENTE DE CALCUL DU STATUT ---
 const calculateStatus = (market: Marche): string => {
@@ -57,14 +59,12 @@ const RegistryRow = ({
     }
   };
 
-  // Helper pour gérer le onChange de manière sécurisée
   const safeOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onChange) {
       onChange(e.target.value);
     }
   };
 
-  // CORRECTION : Si disabled est vrai ou si onChange est manquant, on met readOnly
   const isReadOnly = disabled || !onChange;
 
   return (
@@ -179,7 +179,6 @@ const MarketDetail: React.FC = () => {
   }
 
   // --- MISE A JOUR AUTOMATIQUE DU STATUT ---
-  // A chaque fois que 'market' change, on recalcule le statut
   useEffect(() => {
     const newStatus = calculateStatus(market);
     if (newStatus !== market.etat_avancement) {
@@ -277,21 +276,21 @@ const MarketDetail: React.FC = () => {
           <RegistryRow number="14" label="ANO bailleurs (ANO)" hasDoc doc={market.docs?.ano_eval} onUpload={(f: File) => handleUpload('ano_eval', f)} onChange={undefined} />
           <RegistryRow number="15" label="Ouvertures offres financières (PV)" hasDoc doc={market.docs?.ouverture_fin} onUpload={(f: File) => handleUpload('ouverture_fin', f)} onChange={undefined} />
 
-          {/* 16. INFRUCTUEUX */}
+          {/* 16. INFRUCTUEUX - CORRIGÉ AVEC CustomBulleSelect */}
           <div className="p-6 bg-red-50/20 border-y border-red-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-black text-red-400">16.</span>
               <span className="text-[11px] font-black text-red-900 uppercase">Infructueux</span>
             </div>
             <div className="flex items-center gap-4">
-              <select 
-                value={market.is_infructueux ? 'Oui' : 'Non'} 
-                onChange={(e) => handleUpdate('is_infructueux', e.target.value === 'Oui')}
-                className="bg-white border border-red-200 rounded-xl px-4 py-2 text-[11px] font-black text-red-900 outline-none"
-              >
-                <option value="Non">Non</option>
-                <option value="Oui">Oui</option>
-              </select>
+              <div className="w-32 bg-white border border-red-200 rounded-2xl shadow-sm">
+                 <CustomBulleSelect 
+                    value={market.is_infructueux ? 'Oui' : 'Non'} 
+                    onChange={(e: any) => handleUpdate('is_infructueux', e.target.value === 'Oui')}
+                    options={[{ value: 'Non', label: 'NON' }, { value: 'Oui', label: 'OUI' }]}
+                    placeholder="Choix"
+                 />
+              </div>
               {market.is_infructueux && (
                  <UploadButton label="Décision Infructuosité" hasDoc={!!market.doc_infructueux} url={market.doc_infructueux?.url} onUpload={(f) => handleUpload('doc_infructueux', f, false)} />
               )}
@@ -312,7 +311,7 @@ const MarketDetail: React.FC = () => {
           <RegistryRow number="28" label="ANO bailleurs (ANO)" hasDoc doc={market.docs?.ano_projet} onUpload={(f: File) => handleUpload('ano_projet', f)} required onChange={undefined} />
           <RegistryRow number="29" label="Signature marché (marché signé)" hasDoc doc={market.docs?.marche_signe} onUpload={(f: File) => handleUpload('marche_signe', f)} onChange={undefined} />
 
-          {/* 30. ANNULE AVEC MOTIF + ACCORD CA OBLIGATOIRE */}
+          {/* 30. ANNULE */}
           <div className="p-8 bg-slate-900 text-white space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -337,9 +336,7 @@ const MarketDetail: React.FC = () => {
                       onChange={(e) => handleUpdate('motif_annulation', e.target.value)}
                     />
                   </div>
-                  {/* UPLOAD MOTIF ANNULATION (Optionnel si juste texte) */}
                 </div>
-                {/* ACCORD CA OBLIGATOIRE */}
                 <div className="space-y-2">
                    <UploadButton 
                       label="Accord Conseil d'Admin. (Obligatoire)" 
@@ -354,7 +351,7 @@ const MarketDetail: React.FC = () => {
 
           <RegistryRow number="31" label="Notification" type="date" value={market.dates_realisees.notification} required onChange={(v:any) => handleUpdateDate('notification', v)} />
           
-          {/* 32. RECOURS AVEC OUI/NON + ISSUE + UPLOAD */}
+          {/* 32. RECOURS */}
           <div className="p-6 bg-orange-50/50 border-y border-orange-100 flex flex-col gap-4">
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -395,7 +392,6 @@ const MarketDetail: React.FC = () => {
                   <span className="text-[10px] font-black text-slate-400">33.</span>
                   <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Etat d’avancement du dossier (Automatique)</span>
                 </div>
-                {/* --- CHAMP LECTURE SEULE CAR AUTOMATIQUE CORRIGÉ AVEC READONLY --- */}
                 <input 
                   type="text"
                   value={market.etat_avancement}
