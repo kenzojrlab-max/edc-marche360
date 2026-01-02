@@ -6,19 +6,13 @@ import {
 } from 'lucide-react';
 import { useMarkets } from '../contexts/MarketContext'; 
 import { Marche } from '../types';
-// IMPORT DU COMPOSANT CUSTOM
 import { CustomBulleSelect } from '../components/CommonComponents';
 
-// --- FONCTION INTELLIGENTE DE CALCUL DU STATUT ---
 const calculateStatus = (market: Marche): string => {
-  // 1. Statuts prioritaires
   if (market.is_annule) return "Annulé";
   if (market.is_infructueux) return "Infructueux";
-
-  // 2. Vérification chronologique inverse (du plus avancé au moins avancé)
   const d = market.dates_realisees;
-
-  if (d.notification) return "Notifié"; // Fin de passation
+  if (d.notification) return "Notifié";
   if (d.signature_marche) return "Signé";
   if (d.souscription_projet) return "En cours de signature"; 
   if (d.notification_attrib || d.publication) return "Attribué"; 
@@ -29,236 +23,73 @@ const calculateStatus = (market: Marche): string => {
   if (d.ano_bailleur_dao) return "ANO Bailleur obtenu";
   if (d.examen_dao_cipm) return "Examen DAO"; 
   if (d.saisine_cipm) return "En préparation DAO"; 
-  
-  return "Inscrit au PPM"; // Statut par défaut
+  return "Inscrit au PPM";
 };
 
-// --- Composant Ligne de Registre Standard ---
-const RegistryRow = ({ 
-  label, 
-  value, 
-  type = "text", 
-  onChange, 
-  hasDoc = false, 
-  doc, 
-  required = false,
-  placeholder = "Saisir...",
-  disabled = false,
-  number,
-  onUpload
-}: any) => {
+const RegistryRow = ({ label, value, type = "text", onChange, hasDoc = false, doc, required = false, placeholder = "Saisir...", disabled = false, number, onUpload }: any) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0 && onUpload) {
-      onUpload(e.target.files[0]);
-    }
-  };
-
-  const safeOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onChange) {
-      onChange(e.target.value);
-    }
-  };
-
+  const handleUploadClick = () => { fileInputRef.current?.click(); };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files.length > 0 && onUpload) { onUpload(e.target.files[0]); } };
+  const safeOnChange = (e: React.ChangeEvent<HTMLInputElement>) => { if (onChange) { onChange(e.target.value); } };
   const isReadOnly = disabled || !onChange;
-
   return (
     <div className={`group flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-slate-100 hover:bg-slate-50/50 transition-all ${disabled ? 'opacity-70' : ''}`}>
-      <div className="flex-1 pr-6">
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] font-black text-primary/40 min-w-[20px]">{number}.</span>
-          <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight leading-tight">
-            {label} {required && <span className="text-red-500">*</span>}
-          </span>
-        </div>
-      </div>
-      
+      <div className="flex-1 pr-6"><div className="flex items-center gap-3"><span className="text-[10px] font-black text-primary/40 min-w-[20px]">{number}.</span><span className="text-[11px] font-black text-slate-700 uppercase tracking-tight leading-tight">{label} {required && <span className="text-red-500">*</span>}</span></div></div>
       <div className="flex items-center gap-3 mt-2 md:mt-0">
-        {type === "date" ? (
-          <input 
-            type="date" 
-            value={value || ''} 
-            onChange={safeOnChange}
-            readOnly={isReadOnly}
-            disabled={disabled}
-            className={`bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-black text-slate-700 outline-none focus:ring-4 focus:ring-primary/5 w-40 ${isReadOnly ? 'cursor-not-allowed text-slate-500' : ''}`}
-          />
-        ) : type === "number" ? (
-          <input 
-            type="number" 
-            value={value || ''} 
-            onChange={safeOnChange}
-            readOnly={isReadOnly}
-            disabled={disabled}
-            className={`bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-black text-slate-700 outline-none w-40 ${isReadOnly ? 'cursor-not-allowed text-slate-500' : ''}`}
-            placeholder="0"
-          />
-        ) : (
-          <input 
-            type="text" 
-            value={value || ''} 
-            onChange={safeOnChange}
-            readOnly={isReadOnly}
-            disabled={disabled}
-            className={`bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-black text-slate-700 outline-none min-w-[240px] ${isReadOnly ? 'cursor-not-allowed text-slate-500' : ''}`}
-            placeholder={placeholder}
-          />
-        )}
-
-        {hasDoc && (
-          <div className="flex items-center gap-2">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
-              className="hidden" 
-              accept=".pdf,.doc,.docx,.jpg,.png"
-            />
-            {doc ? (
-              <a 
-                href={doc.url} 
-                target="_blank" 
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-all text-[9px] font-black uppercase decoration-0"
-                title="Télécharger le document"
-              >
-                <Download size={14} /> Doc
-              </a>
-            ) : (
-              <button 
-                onClick={handleUploadClick}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-400 rounded-xl border border-dashed border-slate-300 hover:text-primary hover:border-primary transition-all text-[9px] font-black uppercase"
-              >
-                <Upload size={14} /> Charger
-              </button>
-            )}
-          </div>
-        )}
+        {type === "date" ? (<input type="date" value={value || ''} onChange={safeOnChange} readOnly={isReadOnly} disabled={disabled} className={`bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-black text-slate-700 outline-none focus:ring-4 focus:ring-primary/5 w-40 ${isReadOnly ? 'cursor-not-allowed text-slate-500' : ''}`} />) : type === "number" ? (<input type="number" value={value || ''} onChange={safeOnChange} readOnly={isReadOnly} disabled={disabled} className={`bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-black text-slate-700 outline-none w-40 ${isReadOnly ? 'cursor-not-allowed text-slate-500' : ''}`} placeholder="0" />) : (<input type="text" value={value || ''} onChange={safeOnChange} readOnly={isReadOnly} disabled={disabled} className={`bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-black text-slate-700 outline-none min-w-[240px] ${isReadOnly ? 'cursor-not-allowed text-slate-500' : ''}`} placeholder={placeholder} />)}
+        {hasDoc && (<div className="flex items-center gap-2"><input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.doc,.docx,.jpg,.png" />{doc ? (<a href={doc.url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-all text-[9px] font-black uppercase decoration-0" title="Télécharger le document"><Download size={14} /> Doc</a>) : (<button onClick={handleUploadClick} className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-400 rounded-xl border border-dashed border-slate-300 hover:text-primary hover:border-primary transition-all text-[9px] font-black uppercase"><Upload size={14} /> Charger</button>)}</div>)}
       </div>
     </div>
   );
 };
 
-// Composant Bouton Upload Spécifique (pour les blocs Annulation/Recours)
 const UploadButton = ({ label, hasDoc, url, onUpload }: { label: string, hasDoc: boolean, url?: string, onUpload: (file: File) => void }) => {
   const ref = useRef<HTMLInputElement>(null);
   return (
-    <div className="space-y-1">
-       <label className="text-[9px] font-black uppercase text-slate-400 ml-2">{label}</label>
-       <input type="file" ref={ref} className="hidden" onChange={(e) => e.target.files && onUpload(e.target.files[0])} />
-       {hasDoc ? (
-         <a href={url} target="_blank" rel="noreferrer" className="w-full h-[52px] bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:bg-emerald-100 transition-all decoration-0">
-           <Download size={14} /> Télécharger {label}
-         </a>
-       ) : (
-         <button onClick={() => ref.current?.click()} className="w-full h-[52px] bg-white text-slate-500 border-2 border-dashed border-slate-200 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:border-primary hover:text-primary transition-all">
-           <Upload size={14} /> Téléverser {label}
-         </button>
-       )}
-    </div>
+    <div className="space-y-1"><label className="text-[9px] font-black uppercase text-slate-400 ml-2">{label}</label><input type="file" ref={ref} className="hidden" onChange={(e) => e.target.files && onUpload(e.target.files[0])} />{hasDoc ? (<a href={url} target="_blank" rel="noreferrer" className="w-full h-[52px] bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:bg-emerald-100 transition-all decoration-0"><Download size={14} /> Télécharger {label}</a>) : (<button onClick={() => ref.current?.click()} className="w-full h-[52px] bg-white text-slate-500 border-2 border-dashed border-slate-200 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:border-primary hover:text-primary transition-all"><Upload size={14} /> Téléverser {label}</button>)}</div>
   );
 };
 
 const MarketDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { getMarcheById, updateMarche } = useMarkets();
-  
   const contextMarket = getMarcheById(id || '');
   const [market, setMarket] = useState(contextMarket);
 
   if (!contextMarket) return <Navigate to="/ppm-view" />;
-  
-  if (!market) {
-      setMarket(contextMarket);
-      return null;
-  }
+  if (!market) { setMarket(contextMarket); return null; }
 
-  // --- MISE A JOUR AUTOMATIQUE DU STATUT ---
   useEffect(() => {
     const newStatus = calculateStatus(market);
-    if (newStatus !== market.etat_avancement) {
-        setMarket(prev => prev ? ({ ...prev, etat_avancement: newStatus }) : null);
-    }
+    if (newStatus !== market.etat_avancement) { setMarket(prev => prev ? ({ ...prev, etat_avancement: newStatus }) : null); }
   }, [market.dates_realisees, market.is_annule, market.is_infructueux]);
 
-
-  const handleUpdate = (field: string, val: any) => {
-    setMarket({ ...market, [field]: val });
-  };
-
-  const handleUpdateDate = (key: string, val: string) => {
-    setMarket({
-      ...market,
-      dates_realisees: { ...market.dates_realisees, [key]: val }
-    } as any);
-  };
-
-  // Gestion Upload avec création de lien temporaire
+  const handleUpdate = (field: string, val: any) => { setMarket({ ...market, [field]: val }); };
+  const handleUpdateDate = (key: string, val: string) => { setMarket({ ...market, dates_realisees: { ...market.dates_realisees, [key]: val } } as any); };
   const handleUpload = (field: string, file: File, isDocArray: boolean = true) => {
      const fakeUrl = URL.createObjectURL(file);
      const newDoc = { nom: file.name, url: fakeUrl, date_upload: new Date().toISOString().split('T')[0] };
-     
-     if (isDocArray) {
-        setMarket({ ...market, docs: { ...market.docs, [field]: newDoc } });
-     } else {
-        setMarket({ ...market, [field]: newDoc } as any);
-     }
+     if (isDocArray) { setMarket({ ...market, docs: { ...market.docs, [field]: newDoc } }); } else { setMarket({ ...market, [field]: newDoc } as any); }
   };
-
-  const handleSave = () => {
-    if (market) {
-        updateMarche(market);
-        alert("Modifications enregistrées !");
-    }
-  };
+  const handleSave = () => { if (market) { updateMarche(market); alert("Modifications enregistrées !"); } };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-24">
-      {/* HEADER */}
       <div className="flex items-center justify-between bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
-          <button onClick={() => window.history.back()} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-slate-400 hover:text-primary transition-all">
-            <ArrowLeft size={18} />
-          </button>
+          <button onClick={() => window.history.back()} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-slate-400 hover:text-primary transition-all"><ArrowLeft size={18} /></button>
           <div>
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-black text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-full">{market.id}</span>
-              
-              {/* --- AJOUT AUTOMATIQUE DU STATUT DANS L'EN-TÊTE --- */}
-              <span className={`text-[9px] font-black text-white px-2 py-0.5 rounded-full uppercase ${market.is_annule || market.is_infructueux ? 'bg-red-500' : 'bg-emerald-500'}`}>
-                {market.etat_avancement}
-              </span>
-
-              <h1 className="text-lg font-black text-slate-800 uppercase truncate max-w-md">{market.objet}</h1>
-            </div>
+            <div className="flex items-center gap-3"><span className="text-[10px] font-black text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-full">{market.id}</span><span className={`text-[9px] font-black text-white px-2 py-0.5 rounded-full uppercase ${market.is_annule || market.is_infructueux ? 'bg-red-500' : 'bg-emerald-500'}`}>{market.etat_avancement}</span><h1 className="text-lg font-black text-slate-800 uppercase truncate max-w-md">{market.objet}</h1></div>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registre de Passation - EDC S.A.</p>
           </div>
         </div>
-        <button onClick={handleSave} className="bg-primary text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center gap-2 hover:scale-105 transition-transform">
-          <Save size={16} /> Enregistrer
-        </button>
+        <button onClick={handleSave} className="bg-primary text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center gap-2 hover:scale-105 transition-transform"><Save size={16} /> Enregistrer</button>
       </div>
 
-      {/* TABS */}
-      <div className="flex bg-slate-200/50 p-1 rounded-2xl border border-slate-200/50 max-w-xs mx-auto">
-        <button className="flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest bg-white text-primary shadow-sm">Suivi</button>
-      </div>
+      <div className="flex bg-slate-200/50 p-1 rounded-2xl border border-slate-200/50 max-w-xs mx-auto"><button className="flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest bg-white text-primary shadow-sm">Suivi</button></div>
 
-      {/* REGISTRE */}
       <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="p-6 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-           <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary text-white rounded-xl shadow-md"><ListOrdered size={20} /></div>
-              <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">Suivi détaillé de passation</h2>
-           </div>
-           <div className="text-[9px] font-black text-slate-400 bg-white px-3 py-1.5 rounded-full border border-slate-100 uppercase">33 points de contrôle</div>
-        </div>
-
+        <div className="p-6 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between"><div className="flex items-center gap-3"><div className="p-3 bg-primary text-white rounded-xl shadow-md"><ListOrdered size={20} /></div><h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">Suivi détaillé de passation</h2></div><div className="text-[9px] font-black text-slate-400 bg-white px-3 py-1.5 rounded-full border border-slate-100 uppercase">33 points de contrôle</div></div>
         <div className="divide-y divide-slate-50">
           <RegistryRow number="1" label="N°" value={market.id} disabled />
           <RegistryRow number="2" label="Intitulé du projet (DAO téléchargeable)" value={market.objet} hasDoc doc={market.docs?.dao} onUpload={(f: File) => handleUpload('dao', f)} onChange={(v:any) => handleUpdate('objet', v)} />
@@ -276,24 +107,13 @@ const MarketDetail: React.FC = () => {
           <RegistryRow number="14" label="ANO bailleurs (ANO)" hasDoc doc={market.docs?.ano_eval} onUpload={(f: File) => handleUpload('ano_eval', f)} onChange={undefined} />
           <RegistryRow number="15" label="Ouvertures offres financières (PV)" hasDoc doc={market.docs?.ouverture_fin} onUpload={(f: File) => handleUpload('ouverture_fin', f)} onChange={undefined} />
 
-          {/* 16. INFRUCTUEUX - CORRIGÉ AVEC CustomBulleSelect */}
           <div className="p-6 bg-red-50/20 border-y border-red-100 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-black text-red-400">16.</span>
-              <span className="text-[11px] font-black text-red-900 uppercase">Infructueux</span>
-            </div>
+            <div className="flex items-center gap-3"><span className="text-[10px] font-black text-red-400">16.</span><span className="text-[11px] font-black text-red-900 uppercase">Infructueux</span></div>
             <div className="flex items-center gap-4">
               <div className="w-32 bg-white border border-red-200 rounded-2xl shadow-sm">
-                 <CustomBulleSelect 
-                    value={market.is_infructueux ? 'Oui' : 'Non'} 
-                    onChange={(e: any) => handleUpdate('is_infructueux', e.target.value === 'Oui')}
-                    options={[{ value: 'Non', label: 'NON' }, { value: 'Oui', label: 'OUI' }]}
-                    placeholder="Choix"
-                 />
+                 <CustomBulleSelect value={market.is_infructueux ? 'Oui' : 'Non'} onChange={(e: any) => handleUpdate('is_infructueux', e.target.value === 'Oui')} options={[{ value: 'Non', label: 'NON' }, { value: 'Oui', label: 'OUI' }]} placeholder="Choix" />
               </div>
-              {market.is_infructueux && (
-                 <UploadButton label="Décision Infructuosité" hasDoc={!!market.doc_infructueux} url={market.doc_infructueux?.url} onUpload={(f) => handleUpload('doc_infructueux', f, false)} />
-              )}
+              {market.is_infructueux && (<UploadButton label="Décision Infructuosité" hasDoc={!!market.doc_infructueux} url={market.doc_infructueux?.url} onUpload={(f) => handleUpload('doc_infructueux', f, false)} />)}
             </div>
           </div>
 
@@ -311,97 +131,22 @@ const MarketDetail: React.FC = () => {
           <RegistryRow number="28" label="ANO bailleurs (ANO)" hasDoc doc={market.docs?.ano_projet} onUpload={(f: File) => handleUpload('ano_projet', f)} required onChange={undefined} />
           <RegistryRow number="29" label="Signature marché (marché signé)" hasDoc doc={market.docs?.marche_signe} onUpload={(f: File) => handleUpload('marche_signe', f)} onChange={undefined} />
 
-          {/* 30. ANNULE */}
           <div className="p-8 bg-slate-900 text-white space-y-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-black text-slate-500">30.</span>
-                <span className="text-[11px] font-black uppercase tracking-widest text-amber-400">Annulé</span>
-              </div>
-              <div className="flex bg-white/10 rounded-xl p-1 border border-white/20">
-                <button onClick={() => handleUpdate('is_annule', true)} className={`px-5 py-2 text-[9px] font-black rounded-lg transition-all ${market.is_annule ? 'bg-amber-500 text-slate-900' : 'text-slate-400'}`}>OUI</button>
-                <button onClick={() => handleUpdate('is_annule', false)} className={`px-5 py-2 text-[9px] font-black rounded-lg transition-all ${!market.is_annule ? 'bg-white/20 text-white' : 'text-slate-400'}`}>NON</button>
-              </div>
+              <div className="flex items-center gap-3"><span className="text-[10px] font-black text-slate-500">30.</span><span className="text-[11px] font-black uppercase tracking-widest text-amber-400">Annulé</span></div>
+              <div className="flex bg-white/10 rounded-xl p-1 border border-white/20"><button onClick={() => handleUpdate('is_annule', true)} className={`px-5 py-2 text-[9px] font-black rounded-lg transition-all ${market.is_annule ? 'bg-amber-500 text-slate-900' : 'text-slate-400'}`}>OUI</button><button onClick={() => handleUpdate('is_annule', false)} className={`px-5 py-2 text-[9px] font-black rounded-lg transition-all ${!market.is_annule ? 'bg-white/20 text-white' : 'text-slate-400'}`}>NON</button></div>
             </div>
-            {market.is_annule && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in zoom-in-95 duration-300">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase text-slate-400 ml-2">Motif (Explicatif)</label>
-                    <input 
-                      type="text" 
-                      className="w-full bg-white/10 border-none rounded-xl p-4 text-xs font-bold outline-none placeholder:text-slate-600"
-                      placeholder="Préciser le motif de l'annulation..."
-                      value={market.motif_annulation || ''}
-                      onChange={(e) => handleUpdate('motif_annulation', e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                   <UploadButton 
-                      label="Accord Conseil d'Admin. (Obligatoire)" 
-                      hasDoc={!!market.doc_annulation_ca} 
-                      url={market.doc_annulation_ca?.url} 
-                      onUpload={(f) => handleUpload('doc_annulation_ca', f, false)} 
-                   />
-                </div>
-              </div>
-            )}
+            {market.is_annule && (<div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in zoom-in-95 duration-300"><div className="space-y-4"><div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-400 ml-2">Motif (Explicatif)</label><input type="text" className="w-full bg-white/10 border-none rounded-xl p-4 text-xs font-bold outline-none placeholder:text-slate-600" placeholder="Préciser le motif de l'annulation..." value={market.motif_annulation || ''} onChange={(e) => handleUpdate('motif_annulation', e.target.value)} /></div></div><div className="space-y-2"><UploadButton label="Accord Conseil d'Admin. (Obligatoire)" hasDoc={!!market.doc_annulation_ca} url={market.doc_annulation_ca?.url} onUpload={(f) => handleUpload('doc_annulation_ca', f, false)} /></div></div>)}
           </div>
 
           <RegistryRow number="31" label="Notification" type="date" value={market.dates_realisees.notification} required onChange={(v:any) => handleUpdateDate('notification', v)} />
           
-          {/* 32. RECOURS */}
           <div className="p-6 bg-orange-50/50 border-y border-orange-100 flex flex-col gap-4">
-             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                   <span className="text-[10px] font-black text-orange-400">32.</span>
-                   <span className="text-[11px] font-black text-orange-900 uppercase">Recours (Contentieux)</span>
-                </div>
-                <div className="flex bg-white border border-orange-200 rounded-xl p-1">
-                   <button onClick={() => handleUpdate('has_recours', true)} className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${market.has_recours ? 'bg-orange-500 text-white' : 'text-slate-400'}`}>OUI</button>
-                   <button onClick={() => handleUpdate('has_recours', false)} className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${!market.has_recours ? 'bg-slate-100 text-slate-500' : 'text-slate-400'}`}>NON</button>
-                </div>
-             </div>
-             
-             {market.has_recours && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 animate-in slide-in-from-top-2">
-                   <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-orange-700 ml-2">Issue / Résolution</label>
-                      <input 
-                         type="text" 
-                         className="w-full bg-white border border-orange-200 rounded-xl p-3 text-xs font-bold outline-none text-orange-900 placeholder:text-orange-300"
-                         placeholder="Résultat du recours..."
-                         value={market.recours_issue || ''}
-                         onChange={(e) => handleUpdate('recours_issue', e.target.value)}
-                      />
-                   </div>
-                   <UploadButton 
-                      label="Pièce jointe du Recours" 
-                      hasDoc={!!market.doc_recours} 
-                      url={market.doc_recours?.url} 
-                      onUpload={(f) => handleUpload('doc_recours', f, false)} 
-                   />
-                </div>
-             )}
+             <div className="flex items-center justify-between"><div className="flex items-center gap-3"><span className="text-[10px] font-black text-orange-400">32.</span><span className="text-[11px] font-black text-orange-900 uppercase">Recours (Contentieux)</span></div><div className="flex bg-white border border-orange-200 rounded-xl p-1"><button onClick={() => handleUpdate('has_recours', true)} className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${market.has_recours ? 'bg-orange-500 text-white' : 'text-slate-400'}`}>OUI</button><button onClick={() => handleUpdate('has_recours', false)} className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${!market.has_recours ? 'bg-slate-100 text-slate-500' : 'text-slate-400'}`}>NON</button></div></div>
+             {market.has_recours && (<div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 animate-in slide-in-from-top-2"><div className="space-y-1"><label className="text-[9px] font-black uppercase text-orange-700 ml-2">Issue / Résolution</label><input type="text" className="w-full bg-white border border-orange-200 rounded-xl p-3 text-xs font-bold outline-none text-orange-900 placeholder:text-orange-300" placeholder="Résultat du recours..." value={market.recours_issue || ''} onChange={(e) => handleUpdate('recours_issue', e.target.value)} /></div><UploadButton label="Pièce jointe du Recours" hasDoc={!!market.doc_recours} url={market.doc_recours?.url} onUpload={(f) => handleUpload('doc_recours', f, false)} /></div>)}
           </div>
           
-          <div className="p-6 bg-slate-50 border-t border-slate-100">
-             <div className="flex flex-col space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-slate-400">33.</span>
-                  <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Etat d’avancement du dossier (Automatique)</span>
-                </div>
-                <input 
-                  type="text"
-                  value={market.etat_avancement}
-                  disabled
-                  readOnly
-                  className="w-full bg-slate-100 border-2 border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-600 outline-none uppercase tracking-wide cursor-not-allowed"
-                />
-                <p className="text-[9px] text-slate-400 italic">Ce champ est mis à jour automatiquement en fonction des dates saisies ci-dessus.</p>
-             </div>
-          </div>
+          <div className="p-6 bg-slate-50 border-t border-slate-100"><div className="flex flex-col space-y-3"><div className="flex items-center gap-2"><span className="text-[10px] font-black text-slate-400">33.</span><span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Etat d’avancement du dossier (Automatique)</span></div><input type="text" value={market.etat_avancement} disabled readOnly className="w-full bg-slate-100 border-2 border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-600 outline-none uppercase tracking-wide cursor-not-allowed" /><p className="text-[9px] text-slate-400 italic">Ce champ est mis à jour automatiquement en fonction des dates saisies ci-dessus.</p></div></div>
         </div>
       </div>
     </div>

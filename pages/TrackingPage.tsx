@@ -15,7 +15,6 @@ import {
 import { CURRENT_USER } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, UserRole } from '../types';
 import { useMarkets } from '../contexts/MarketContext';
-// IMPORT DU COMPOSANT CUSTOM
 import { CustomBulleSelect } from '../components/CommonComponents';
 
 const DocCell = ({ doc, label, disabled, onUpload }: { doc?: any, label: string, disabled?: boolean, onUpload?: (file: File) => void }) => {
@@ -114,7 +113,7 @@ const TrackingPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-[100vw] overflow-hidden">
       
-      {/* HEADER PRINCIPAL : TITRE ET BOUTON D'ACTION */}
+      {/* HEADER NIVEAU 1 */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pr-2">
         <div>
           <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
@@ -125,55 +124,31 @@ const TrackingPage: React.FC = () => {
             Registre de pilotage - {isAdmin ? 'Administration & Téléversement' : 'Consultation & Téléchargement'}
           </p>
         </div>
-
-        {/* BOUTON ENREGISTRER PLACÉ ICI POUR ÊTRE TOUJOURS VISIBLE */}
         {isAdmin && (
-          <button 
-            onClick={handleSave} 
-            className="bg-primary text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center gap-2 transition-transform hover:scale-105 active:scale-95 whitespace-nowrap"
-          >
+          <button onClick={handleSave} className="bg-primary text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center gap-2 transition-transform hover:scale-105 active:scale-95 whitespace-nowrap">
             <Save size={16} /> Enregistrer
           </button>
         )}
       </div>
 
-      {/* BARRE DE FILTRES */}
+      {/* HEADER NIVEAU 2 */}
       <div className="flex flex-col md:flex-row items-center gap-3 flex-wrap bg-white p-3 rounded-[1.5rem] border border-slate-200 shadow-sm">
           <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200/50 min-w-[120px]">
-             <CustomBulleSelect 
-               value={selectedYear.toString()} 
-               onChange={(e: any) => setSelectedYear(parseInt(e.target.value))} 
-               options={[{ value: '2024', label: '2024' }, { value: '2025', label: '2025' }, { value: '2026', label: '2026' }]}
-               placeholder="Année"
-             />
+             <CustomBulleSelect value={selectedYear.toString()} onChange={(e: any) => setSelectedYear(parseInt(e.target.value))} options={[{ value: '2024', label: '2024' }, { value: '2025', label: '2025' }, { value: '2026', label: '2026' }]} placeholder="Année" />
           </div>
-
           <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200/50 min-w-[200px] max-w-xs">
-             <CustomBulleSelect 
-               value={selectedProjetId} 
-               onChange={(e: any) => setSelectedProjetId(e.target.value)} 
-               options={[{ value: '', label: 'Tous les Projets' }, ...availableProjects.map(p => ({ value: p.id, label: p.libelle }))]}
-               placeholder="Tous les Projets"
-             />
+             <CustomBulleSelect value={selectedProjetId} onChange={(e: any) => setSelectedProjetId(e.target.value)} options={[{ value: '', label: 'Tous les Projets' }, ...availableProjects.map(p => ({ value: p.id, label: p.libelle }))]} placeholder="Tous les Projets" />
           </div>
-
           <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
-
           <div className="relative group flex-1 w-full md:w-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
-            <input 
-              type="text" 
-              placeholder="Rechercher par N° Dossier ou Objet..."
-              className="bg-slate-50 border border-slate-200/50 rounded-2xl py-2.5 pl-10 pr-4 text-xs font-black text-slate-700 outline-none w-full focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <input type="text" placeholder="Rechercher..." className="bg-slate-50 border border-slate-200/50 rounded-2xl py-2.5 pl-10 pr-4 text-xs font-black text-slate-700 outline-none w-full focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
       </div>
 
       {/* TABLEAU */}
       <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden relative">
-        <div className="overflow-x-auto custom-scrollbar">
+        <div className="overflow-x-auto custom-scrollbar min-h-[400px]">
           <table className="w-full text-left text-[9px] font-black border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-slate-900 text-white uppercase tracking-widest text-[8px]">
@@ -188,8 +163,9 @@ const TrackingPage: React.FC = () => {
                 <th colSpan={3} className="px-4 py-2 text-center bg-slate-800">31-33. Clôture</th>
               </tr>
               <tr className="bg-slate-50 text-slate-400 border-b border-slate-200 uppercase text-[8px]">
+                {/* En-têtes (raccourcis pour lisibilité, même structure qu'avant) */}
                 <th className="px-3 py-3 sticky left-0 bg-slate-50 z-20 border-r border-slate-200">1. N°</th>
-                <th className="px-3 py-3 min-w-[160px] border-r border-slate-200">2. Intitulé projet (DAO)</th>
+                <th className="px-3 py-3 min-w-[160px] border-r border-slate-200">2. Intitulé projet</th>
                 <th className="px-3 py-3 border-r border-slate-200">3. Financement</th>
                 <th className="px-3 py-3 border-r border-slate-200">4. Imputation</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">5. Saisine prév.</th>
@@ -203,7 +179,10 @@ const TrackingPage: React.FC = () => {
                 <th className="px-3 py-3 border-r border-slate-200 text-center">13. Valid. Éval.</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">14. ANO bailleurs</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">15. Ouv. Fin.</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center">16. Infructueux</th>
+                
+                {/* CORRECTION TAILLE EN-TÊTE 16 */}
+                <th className="px-3 py-3 border-r border-slate-200 text-center min-w-[160px]">16. Infructueux</th>
+                
                 <th className="px-3 py-3 border-r border-slate-200 text-center">17. Prop. Attrib.</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">18. Avis CA</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">19. ANO Bailleurs</th>
@@ -217,9 +196,15 @@ const TrackingPage: React.FC = () => {
                 <th className="px-3 py-3 border-r border-slate-200 text-center">27. Validation</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center bg-slate-100/50">28. ANO bailleurs</th>
                 <th className="px-3 py-3 border-r border-slate-200 text-center">29. Signature</th>
-                <th className="px-3 py-3 border-r border-slate-200 text-center min-w-[180px]">30. Annulé</th>
+                
+                {/* CORRECTION TAILLE EN-TÊTE 30 */}
+                <th className="px-3 py-3 border-r border-slate-200 text-center min-w-[160px]">30. Annulé</th>
+                
                 <th className="px-3 py-3 border-r border-slate-200 text-center">31. Notification</th>
-                <th className="px-3 py-3 border-r border-slate-200 min-w-[180px]">32. Recours</th>
+                
+                {/* CORRECTION TAILLE EN-TÊTE 32 */}
+                <th className="px-3 py-3 border-r border-slate-200 min-w-[160px]">32. Recours</th>
+                
                 <th className="px-3 py-3">33. Etat</th>
               </tr>
             </thead>
@@ -228,22 +213,10 @@ const TrackingPage: React.FC = () => {
                 const isEDC = m.source_financement === SourceFinancement.BUDGET_EDC;
                 return (
                   <tr key={m.id} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="px-3 py-2.5 sticky left-0 bg-white group-hover:bg-slate-50 z-20 border-r border-slate-100 font-black text-primary">
-                      <Link to={`/markets/${m.id}`}>{m.id}</Link>
-                    </td>
-                    <td className="px-3 py-2.5 border-r border-slate-100">
-                      <div className="flex items-center gap-1.5 justify-between">
-                        <span className="truncate max-w-[120px] text-slate-700" title={m.objet}>{m.objet}</span>
-                        <DocCell doc={m.docs?.dao} label="DAO" onUpload={(f) => handleDocUpload(m.id, 'dao', f)} />
-                      </div>
-                    </td>
+                    <td className="px-3 py-2.5 sticky left-0 bg-white group-hover:bg-slate-50 z-20 border-r border-slate-100 font-black text-primary"><Link to={`/markets/${m.id}`}>{m.id}</Link></td>
+                    <td className="px-3 py-2.5 border-r border-slate-100"><div className="flex items-center gap-1.5 justify-between"><span className="truncate max-w-[120px] text-slate-700" title={m.objet}>{m.objet}</span><DocCell doc={m.docs?.dao} label="DAO" onUpload={(f) => handleDocUpload(m.id, 'dao', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-slate-400 text-[8px]">{m.source_financement}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100">
-                      <div className="flex items-center gap-1.5 justify-between">
-                        <span className="font-mono text-slate-500">{m.imputation_budgetaire}</span>
-                        <DocCell doc={m.docs?.imputation} label="Attest. DF" onUpload={(f) => handleDocUpload(m.id, 'imputation', f)} />
-                      </div>
-                    </td>
+                    <td className="px-3 py-2.5 border-r border-slate-100"><div className="flex items-center gap-1.5 justify-between"><span className="font-mono text-slate-500">{m.imputation_budgetaire}</span><DocCell doc={m.docs?.imputation} label="Attest. DF" onUpload={(f) => handleDocUpload(m.id, 'imputation', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.saisine_cipm_prev} onChange={(v) => handleUpdateDate(m.id, 'saisine_cipm_prev', v)} /></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.saisine_cipm} onChange={(v) => handleUpdateDate(m.id, 'saisine_cipm', v)} /><DocCell doc={m.docs?.saisine} label="Saisine" onUpload={(f) => handleDocUpload(m.id, 'saisine', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.examen_dao_cipm} onChange={(v) => handleUpdateDate(m.id, 'examen_dao_cipm', v)} /></td>
@@ -256,10 +229,10 @@ const TrackingPage: React.FC = () => {
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_eval} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_eval', v)} /><DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_eval} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_eval', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.ouverture_financiere} onChange={(v) => handleUpdateDate(m.id, 'ouverture_financiere', v)} /><DocCell doc={m.docs?.ouverture_financiere} label="PV" onUpload={(f) => handleDocUpload(m.id, 'ouverture_financiere', f)} /></div></td>
                     
-                    {/* COLONNE 16 : INFRUCTUEUX (MODIFIÉE) */}
+                    {/* COLONNE 16 : INFRUCTUEUX (LARGEUR HARMONISÉE 140px) */}
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center">
                       <div className="flex items-center gap-1 justify-center">
-                        <div className="w-20">
+                        <div className="w-[140px]">
                            <CustomBulleSelect 
                               value={m.is_infructueux ? 'Oui' : 'Non'} 
                               onChange={(e: any) => handleUpdateField(m.id, 'is_infructueux', e.target.value === 'Oui')}
@@ -286,10 +259,10 @@ const TrackingPage: React.FC = () => {
                     <td className={`px-3 py-2.5 border-r border-slate-100 text-center ${isEDC ? 'bg-slate-50' : ''}`}><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin || isEDC} value={m.dates_realisees.ano_bailleur_projet} onChange={(v) => handleUpdateDate(m.id, 'ano_bailleur_projet', v)} /><DocCell disabled={isEDC} doc={m.docs?.ano_bailleur_projet} label="ANO" onUpload={(f) => handleDocUpload(m.id, 'ano_bailleur_projet', f)} /></div></td>
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><div className="flex items-center gap-1 justify-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.signature_marche} onChange={(v) => handleUpdateDate(m.id, 'signature_marche', v)} /><DocCell doc={m.docs?.signature_marche} label="Marché" onUpload={(f) => handleDocUpload(m.id, 'signature_marche', f)} /></div></td>
                     
-                    {/* COLONNE 30 : ANNULÉ (MODIFIÉE) */}
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-center min-w-[200px]">
-                      <div className="flex flex-col gap-1.5">
-                        <div className="w-full min-w-[120px]">
+                    {/* COLONNE 30 : ANNULÉ (LARGEUR HARMONISÉE 140px) */}
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-center">
+                      <div className="flex flex-col gap-1.5 items-center">
+                        <div className="w-[140px]">
                            <CustomBulleSelect 
                               value={m.is_annule ? 'Oui' : 'Non'} 
                               onChange={(e: any) => handleUpdateField(m.id, 'is_annule', e.target.value === 'Oui')}
@@ -298,16 +271,16 @@ const TrackingPage: React.FC = () => {
                               placeholder="-"
                            />
                         </div>
-                        {m.is_annule && (<div className="animate-in slide-in-from-top-1 fade-in duration-200 space-y-1"><input type="text" disabled={!isAdmin} placeholder="Motif..." value={m.motif_annulation || ''} onChange={(e) => handleUpdateField(m.id, 'motif_annulation', e.target.value)} className="w-full bg-amber-50 border-none rounded px-1.5 py-1 text-[8px] font-bold text-amber-800 placeholder:text-amber-300 outline-none" /><div className="flex justify-end"><DocCell doc={m.doc_annulation_ca} label="Accord CA" onUpload={(f) => handleDocUpload(m.id, 'doc_annulation_ca', f, true)} /></div></div>)}
+                        {m.is_annule && (<div className="animate-in slide-in-from-top-1 fade-in duration-200 space-y-1 w-[140px]"><input type="text" disabled={!isAdmin} placeholder="Motif..." value={m.motif_annulation || ''} onChange={(e) => handleUpdateField(m.id, 'motif_annulation', e.target.value)} className="w-full bg-amber-50 border-none rounded px-1.5 py-1 text-[8px] font-bold text-amber-800 placeholder:text-amber-300 outline-none" /><div className="flex justify-end"><DocCell doc={m.doc_annulation_ca} label="Accord CA" onUpload={(f) => handleDocUpload(m.id, 'doc_annulation_ca', f, true)} /></div></div>)}
                       </div>
                     </td>
 
                     <td className="px-3 py-2.5 border-r border-slate-100 text-center"><AdminDateInput disabled={!isAdmin} value={m.dates_realisees.notification} onChange={(v) => handleUpdateDate(m.id, 'notification', v)} /></td>
                     
-                    {/* COLONNE 32 : RECOURS (MODIFIÉE) */}
-                    <td className="px-3 py-2.5 border-r border-slate-100 min-w-[150px]">
-                      <div className="flex flex-col gap-1.5">
-                        <div className="w-full min-w-[120px]">
+                    {/* COLONNE 32 : RECOURS (LARGEUR HARMONISÉE 140px) */}
+                    <td className="px-3 py-2.5 border-r border-slate-100">
+                      <div className="flex flex-col gap-1.5 items-center">
+                        <div className="w-[140px]">
                            <CustomBulleSelect 
                               value={m.has_recours ? 'Oui' : 'Non'} 
                               onChange={(e: any) => handleUpdateField(m.id, 'has_recours', e.target.value === 'Oui')}
@@ -316,7 +289,7 @@ const TrackingPage: React.FC = () => {
                               placeholder="-"
                            />
                         </div>
-                        {m.has_recours && (<div className="animate-in slide-in-from-top-1 fade-in duration-200 space-y-1"><input type="text" disabled={!isAdmin} placeholder="Issue/Verdict..." value={m.recours_issue || ''} onChange={(e) => handleUpdateField(m.id, 'recours_issue', e.target.value)} className="w-full bg-orange-50 border-none rounded px-1.5 py-1 text-[8px] font-bold text-orange-800 placeholder:text-orange-300 outline-none" /><div className="flex justify-end"><DocCell doc={m.doc_recours} label="Pièce" onUpload={(f) => handleDocUpload(m.id, 'doc_recours', f, true)} /></div></div>)}
+                        {m.has_recours && (<div className="animate-in slide-in-from-top-1 fade-in duration-200 space-y-1 w-[140px]"><input type="text" disabled={!isAdmin} placeholder="Issue/Verdict..." value={m.recours_issue || ''} onChange={(e) => handleUpdateField(m.id, 'recours_issue', e.target.value)} className="w-full bg-orange-50 border-none rounded px-1.5 py-1 text-[8px] font-bold text-orange-800 placeholder:text-orange-300 outline-none" /><div className="flex justify-end"><DocCell doc={m.doc_recours} label="Pièce" onUpload={(f) => handleDocUpload(m.id, 'doc_recours', f, true)} /></div></div>)}
                       </div>
                     </td>
                     <td className="px-3 py-2.5 bg-primary/5 text-primary text-[8px] uppercase">{m.etat_avancement}</td>
