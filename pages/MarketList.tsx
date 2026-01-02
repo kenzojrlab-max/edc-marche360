@@ -11,7 +11,6 @@ import {
 import { formatFCFA, calculateDaysBetween } from '../services/mockData';
 import { JalonPassationKey, SourceFinancement, StatutGlobal, Marche, Projet } from '../types';
 import { useMarkets } from '../contexts/MarketContext'; 
-// IMPORT DU COMPOSANT CORRIGÉ
 import { CustomBulleSelect } from '../components/CommonComponents';
 
 // --- DATE DU JOUR POUR LES ALERTES ---
@@ -969,7 +968,10 @@ const MarketList: React.FC<MarketListProps> = ({ mode, readOnly = false }) => {
                                        </InlineField>
                                        
                                        <InlineField number="31" label="Notification"><ReadOnlyValue value={m.dates_realisees.notification} isDate /><DocCellInline doc={m.docs?.notification_cloture} label="Notif" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'notification_cloture', f)} /></InlineField>
-                                       <InlineField number="32" label="Recours"><ReadOnlyValue value={m.recours} /><DocCellInline doc={m.docs?.recours} label="Recours" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'recours', f, true)} /></InlineField>
+                                       <InlineField number="32" label="Recours">
+                                          <ReadOnlyValue value={m.has_recours ? (m.recours_issue || 'Contentieux') : 'Néant'} />
+                                          <DocCellInline doc={m.doc_recours} label="Recours" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'doc_recours', f, true)} />
+                                       </InlineField>
                                        <InlineField number="33" label="Etat d'avancement"><span className="text-[7px] font-black text-primary bg-primary/5 px-1 py-0.5 rounded uppercase">{m.etat_avancement}</span><DocCellInline doc={m.docs?.etat_avancement_doc} label="Etat" readOnly={readOnly} onUpload={(f) => handleDocUpload(m.id, 'etat_avancement_doc', f)} /></InlineField>
                                      </div>
                                    )}
