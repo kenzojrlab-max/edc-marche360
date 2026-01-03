@@ -1,5 +1,5 @@
 // pages/TrackingPage.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Search, 
@@ -62,83 +62,66 @@ const TrackingPage: React.FC = () => {
   const { marches, updateMarche, projets, selectedYear, setSelectedYear, selectedProjetId, setSelectedProjetId } = useMarkets();
   const [searchTerm, setSearchTerm] = useState('');
   const isAdmin = CURRENT_USER.role === UserRole.ADMIN || CURRENT_USER.role === UserRole.SUPER_ADMIN;
-  const availableProjects = projets.filter(p => p.exercice === selectedYear);
+  
+  // --- CORRECTION 1 : Utilisation de useMemo pour stabiliser la liste des projets ---
+  // Cela empêche React de "perdre" la liste quand vous tapez une date.
+  const availableProjects = useMemo(() => 
+    projets.filter(p => String(p.exercice) === String(selectedYear)),
+  [projets, selectedYear]);
 
-  useEffect(() => {
-    const projectStillValid = availableProjects.find(p => p.id === selectedProjetId);
-    if (!projectStillValid && selectedProjetId !== '') setSelectedProjetId('');
-  }, [selectedYear]);
+  // --- CORRECTION 2 : SUPPRESSION DU BAD USEEFFECT ---
+  // J'ai retiré le bloc "useEffect" qui réinitialisait "selectedProjetId" à vide.
+  // C'était lui qui faisait disparaître vos lignes lors d'une mise à jour.
 
   const handleSave = () => {
     alert("✅ Modifications enregistrées avec succès dans le registre !");
   };
 
-  // 🔥 CORRECTION CRITIQUE ICI 🔥
   const handleUpdateDate = (marketId: string, key: JalonPassationKey, value: string) => {
     if (!isAdmin) return;
     const market = marches.find(m => m.id === marketId);
-    if (!market) return;
-    
-    // IMPORTANT : On copie TOUT l'objet marché existant et on met à jour SEULEMENT la date
-    const updatedMarket = {
-      ...market, // ✅ COPIE COMPLÈTE de l'objet existant
-      dates_realisees: { 
-        ...market.dates_realisees, // ✅ COPIE COMPLÈTE des dates existantes
-        [key]: value // ✅ Mise à jour SEULEMENT de la date ciblée
-      }
-    };
-    
-    updateMarche(updatedMarket);
+    if (market) updateMarche({ ...market, dates_realisees: { ...market.dates_realisees, [key]: value } });
   };
 
-  // 🔥 CORRECTION CRITIQUE ICI 🔥
   const handleUpdateField = (marketId: string, field: string, value: any) => {
     if (!isAdmin) return;
     const market = marches.find(m => m.id === marketId);
-    if (!market) return;
-    
-    // IMPORTANT : On copie TOUT l'objet marché existant et on met à jour SEULEMENT le champ
-    const updatedMarket = { 
-      ...market, // ✅ COPIE COMPLÈTE de l'objet existant
-      [field]: value // ✅ Mise à jour SEULEMENT du champ ciblé
-    };
-    
-    updateMarche(updatedMarket);
+    if (market) updateMarche({ ...market, [field]: value });
   };
 
   const handleDocUpload = (marketId: string, docKey: string, file: File, isSpecialDoc?: boolean) => {
     if (!isAdmin) return;
     const market = marches.find(m => m.id === marketId);
-    if (!market) return;
-    
-    const fakeUrl = URL.createObjectURL(file);
-    const newDoc = { nom: file.name, url: fakeUrl, date_upload: new Date().toISOString().split('T')[0] };
-    
-    let updatedMarket = { ...market }; // ✅ COPIE COMPLÈTE
-    
-    if (isSpecialDoc) {
-      updatedMarket = { ...updatedMarket, [docKey]: newDoc };
-    } else {
-      updatedMarket = { 
-        ...updatedMarket, 
-        docs: { ...updatedMarket.docs, [docKey]: newDoc } // ✅ COPIE des docs existants
-      };
+    if (market) {
+        const fakeUrl = URL.createObjectURL(file);
+        const newDoc = { nom: file.name, url: fakeUrl, date_upload: new Date().toISOString().split('T')[0] };
+        let updatedMarket = { ...market };
+        if (isSpecialDoc) updatedMarket = { ...updatedMarket, [docKey]: newDoc };
+        else updatedMarket = { ...updatedMarket, docs: { ...updatedMarket.docs, [docKey]: newDoc } };
+        updateMarche(updatedMarket);
     }
-    
-    updateMarche(updatedMarket);
   };
 
-  const filteredMarches = marches.filter(m => {
-    try {
-      const matchYear = Number(m.exercice) === selectedYear;
-      const matchProject = selectedProjetId ? m.projet_id === selectedProjetId : true;
-      const safeId = String(m.id || '').toLowerCase();
-      const safeObjet = String(m.objet || '').toLowerCase();
-      const safeSearch = searchTerm.toLowerCase();
-      const matchSearch = safeId.includes(safeSearch) || safeObjet.includes(safeSearch);
-      return matchYear && matchProject && matchSearch;
-    } catch (e) { return false; }
-  });
+  // --- CORRECTION 3 : Filtre "Blindé" avec useMemo ---
+  // On utilise useMemo ici aussi pour éviter de refaire le calcul pour rien.
+  // Surtout, on compare des String() pour éviter les bugs si l'année est un texte "2024" ou un chiffre 2024.
+  const filteredMarches = useMemo(() => {
+    return marches.filter(m => {
+      try {
+        const matchYear = String(m.exercice) === String(selectedYear);
+        const matchProject = selectedProjetId ? m.projet_id === selectedProjetId : true;
+        
+        const safeId = String(m.id || '').toLowerCase();
+        const safeObjet = String(m.objet || '').toLowerCase();
+        const safeSearch = searchTerm.toLowerCase();
+        const matchSearch = safeId.includes(safeSearch) || safeObjet.includes(safeSearch);
+        
+        return matchYear && matchProject && matchSearch;
+      } catch (e) { 
+        return false; 
+      }
+    });
+  }, [marches, selectedYear, selectedProjetId, searchTerm]);
 
   return (
     <div className="space-y-6 max-w-[100vw] overflow-hidden">
@@ -163,10 +146,10 @@ const TrackingPage: React.FC = () => {
 
       {/* HEADER NIVEAU 2 */}
       <div className="flex flex-col md:flex-row items-center gap-3 flex-wrap bg-white p-3 rounded-[1.5rem] border border-slate-200 shadow-sm">
-          <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200/50 min-w-[120px]">
+          <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200/50 min-w-[150px]">
              <CustomBulleSelect value={selectedYear.toString()} onChange={(e: any) => setSelectedYear(parseInt(e.target.value))} options={[{ value: '2024', label: '2024' }, { value: '2025', label: '2025' }, { value: '2026', label: '2026' }]} placeholder="Année" />
           </div>
-          <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200/50 min-w-[200px] max-w-xs">
+          <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200/50 min-w-[300px] max-w-md">
              <CustomBulleSelect value={selectedProjetId} onChange={(e: any) => setSelectedProjetId(e.target.value)} options={[{ value: '', label: 'Tous les Projets' }, ...availableProjects.map(p => ({ value: p.id, label: p.libelle }))]} placeholder="Tous les Projets" />
           </div>
           <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
@@ -319,11 +302,7 @@ const TrackingPage: React.FC = () => {
           </table>
         </div>
         <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-slate-400">
-           <div className="flex items-center gap-6">
-             <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded bg-primary" /> Mode {isAdmin ? 'Administrateur : Modification active' : 'Consultation : Lecture seule'}</span>
-             <span className="flex items-center gap-1.5"><ShieldCheck size={12} className="text-emerald-500" /> Registre Officiel EDC S.A.</span>
-           </div>
-           <p className="italic">Synchronisation PPM & Suivi temps réel active</p>
+           <div className="flex items-center gap-6"><span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded bg-primary" /> Mode {isAdmin ? 'Administrateur : Modification active' : 'Consultation : Lecture seule'}</span><span className="flex items-center gap-1.5"><ShieldCheck size={12} className="text-emerald-500" /> Registre Officiel EDC S.A.</span></div><p className="italic">Synchronisation PPM & Suivi temps réel active</p>
         </div>
       </div>
     </div>

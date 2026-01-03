@@ -45,6 +45,9 @@ interface MarketContextType {
 
 const MarketContext = createContext<MarketContextType | undefined>(undefined);
 
+// 🔒 VERSION AVEC VERSIONING DU STATE (Pour éviter les conflits de cache)
+const STATE_VERSION = "1.0.0";
+
 export const MarketProvider = ({ children }: { children: React.ReactNode }) => {
   // Initialisation avec les données Mock
   const [marches, setMarches] = useState<Marche[]>(MOCK_MARCHES);
@@ -93,12 +96,84 @@ export const MarketProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // --- MARCHÉS ---
+  // 🔒 VERSION SÉCURISÉE avec VALIDATION STRICTE
   const updateMarche = (updatedMarche: Marche) => {
-    setMarches(prev => prev.map(m => m.id === updatedMarche.id ? updatedMarche : m));
+    // ✅ VALIDATION STRICTE : Vérifier que l'objet est complet
+    const requiredKeys = ['id', 'exercice', 'projet_id', 'dates_realisees', 'dates_prevues', 'execution'];
+    const missingKeys = requiredKeys.filter(key => !(key in updatedMarche));
+    
+    if (missingKeys.length > 0) {
+      console.error('❌ ERREUR : Tentative de mise à jour d\'un marché INCOMPLET !');
+      console.error('Clés manquantes :', missingKeys);
+      console.error('Objet reçu :', updatedMarche);
+      
+      // 🚨 En production, on REFUSE la mise à jour pour éviter les bugs
+      alert('Erreur système : Impossible de mettre à jour le marché (données incomplètes). Contactez l\'administrateur.');
+      return;
+    }
+    
+    // ✅ Vérification supplémentaire : dates_realisees doit avoir toutes les clés
+    const requiredDateKeys = [
+      'saisine_cipm_prev', 'saisine_cipm', 'examen_dao_cipm', 'validation_dao',
+      'ano_bailleur_dao', 'lancement_ao', 'additif', 'depouillement',
+      'validation_eval_offres', 'ano_bailleur_eval', 'ouverture_financiere',
+      'prop_attrib_cipm', 'avis_conforme_ca', 'ano_bailleur_attrib', 'publication',
+      'notification_attrib', 'souscription_projet', 'saisine_cipm_projet',
+      'examen_projet_cipm', 'validation_projet', 'ano_bailleur_projet',
+      'signature_marche', 'notification'
+    ];
+    
+    const missingDateKeys = requiredDateKeys.filter(key => !(key in updatedMarche.dates_realisees));
+    
+    if (missingDateKeys.length > 0) {
+      console.error('❌ ERREUR : dates_realisees INCOMPLET !');
+      console.error('Clés de dates manquantes :', missingDateKeys);
+      console.error('dates_realisees reçu :', updatedMarche.dates_realisees);
+      
+      alert('Erreur système : Structure de dates incomplète. Contactez l\'administrateur.');
+      return;
+    }
+    
+    // ✅ Validation OK → Mise à jour
+    console.log('✅ Validation OK : Mise à jour du marché', updatedMarche.id);
+    
+    setMarches(prev => {
+      const result = prev.map(m => m.id === updatedMarche.id ? updatedMarche : m);
+      console.log('🔵 État après mise à jour :', {
+        totalMarches: result.length,
+        marcheUpdated: updatedMarche.id,
+        hasAllProps: !!updatedMarche.exercice && !!updatedMarche.projet_id
+      });
+      return result;
+    });
   };
 
   const addMarche = (newMarche: Marche) => {
-    setMarches(prev => [...prev, newMarche]);
+    // ✅ VALIDATION avant ajout
+    const requiredKeys = ['id', 'exercice', 'projet_id', 'dates_realisees', 'dates_prevues', 'execution'];
+    const missingKeys = requiredKeys.filter(key => !(key in newMarche));
+    
+    if (missingKeys.length > 0) {
+      console.error('❌ ERREUR : Tentative d\'ajout d\'un marché INCOMPLET !');
+      console.error('Clés manquantes :', missingKeys);
+      console.error('Objet reçu :', newMarche);
+      
+      alert('Erreur système : Impossible d\'ajouter le marché (données incomplètes). Vérifiez l\'import Excel.');
+      return;
+    }
+    
+    console.log('✅ Validation OK : Ajout du marché', newMarche.id);
+    
+    setMarches(prev => {
+      const result = [...prev, newMarche];
+      console.log('🟢 Marché ajouté :', {
+        totalMarches: result.length,
+        nouveauMarche: newMarche.id,
+        exercice: newMarche.exercice,
+        projet_id: newMarche.projet_id
+      });
+      return result;
+    });
   };
 
   const getMarcheById = (id: string) => marches.find(m => m.id === id);
